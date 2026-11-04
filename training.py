@@ -20,7 +20,6 @@
 # +------------------------------------+
 
 import argparse
-import csv
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,29 +40,11 @@ INFO = [
 ]
 
 
-def extract_data(csv_path, solution_path=None):
+def extract_data(csv_path):
 	try:
-		if solution_path is None:
-			columns = load_csv(csv_path, INFO, allow_empty_diagnosis=False)
-			raw_labels = columns["Diagnosis"]
-		else:
-			columns = load_csv(csv_path, INFO, allow_empty_diagnosis=True)
-			sol_dict = {}
-			with open(solution_path, "r", encoding="utf-8") as f:
-				reader = csv.reader(f)
-				header = next(reader, None)
-				for row_num, row in enumerate(reader, start=2):
-					if len(row) != 2:
-						raise ValueError(f"Invalid format in solution file '{solution_path}' at line {row_num}")
-					sol_dict[row[0].strip()] = row[1].strip()
-			raw_labels = []
-			for i, id_val in enumerate(columns["ID"], start=1):
-				id_str = str(id_val).strip()
-				if id_str not in sol_dict:
-					raise ValueError(f"ID '{id_str}' at row {i} not found in solution file '{solution_path}'.")
-				raw_labels.append(sol_dict[id_str])
+		columns = load_csv(csv_path, INFO)
 		y = []
-		for i, label in enumerate(raw_labels, start=1):
+		for i, label in enumerate(columns["Diagnosis"], start=1):
 			if label == "M":
 				y.append([1, 0])
 			elif label == "B":
@@ -87,27 +68,48 @@ def extract_data(csv_path, solution_path=None):
 		sys.exit(1)
 
 
-def plot_learning_curves(history):
+def plot_learning_curves(histories):
 	try:
-		epochs = range(1, len(history["loss"]) + 1)
-		fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-		#loss curve
-		ax1.plot(epochs, history["loss"], label="Train Loss", color="blue")
-		ax1.plot(epochs, history["val_loss"], label="Validation Loss", color="red", linestyle="--")
-		ax1.set_title("Binary Cross-Entropy Loss")
-		ax1.set_xlabel("Epochs")
-		ax1.set_ylabel("Loss")
-		ax1.legend()
-		ax1.grid(True)
-		# acc curve
-		ax2.plot(epochs, history["acc"], label="Train Accuracy", color="blue")
-		ax2.plot(epochs, history["val_acc"], label="Validation Accuracy", color="red", linestyle="--")
-		ax2.set_title("Accuracy")
-		ax2.set_xlabel("Epochs")
-		ax2.set_ylabel("Accuracy")
-		ax2.legend()
-		ax2.grid(True)
-		plt.tight_layout()
+		plt.style.use('dark_background')
+		
+		num_plots = len(histories)
+		fig, axes = plt.subplots(num_plots, 2, figsize=(14, 6 * num_plots))
+		
+		if num_plots == 1:
+			axes = [axes]
+			
+		for (act_name, history), (ax1, ax2) in zip(histories.items(), axes):
+			epochs = range(1, len(history["loss"]) + 1)
+			total_epochs = len(epochs)
+
+			final_loss = history["loss"][-1]
+			final_val_loss = history["val_loss"][-1]
+			final_acc = history["acc"][-1]
+			final_val_acc = history["val_acc"][-1]
+
+			color_train = "cyan"
+			color_val = "orange"
+
+			ax1.plot(epochs, history["loss"], label="Train Loss", color=color_train)
+			ax1.plot(epochs, history["val_loss"], label="Validation Loss", color=color_val, linestyle="--")
+
+			title_loss = f"Loss ({act_name.upper()}) - Epoch {total_epochs}/{total_epochs}\nLoss: {final_loss:.4f} | Val_Loss: {final_val_loss:.4f}"
+			ax1.set_title(title_loss, pad=15, fontsize=12)
+			ax1.set_xlabel("Epochs")
+			ax1.set_ylabel("Loss")
+			ax1.legend()
+			ax1.grid(True, alpha=0.3)
+
+			ax2.plot(epochs, history["acc"], label="Train Accuracy", color=color_train)
+			ax2.plot(epochs, history["val_acc"], label="Validation Accuracy", color=color_val, linestyle="--")
+			
+			title_acc = f"Accuracy ({act_name.upper()}) - Epoch {total_epochs}/{total_epochs}\nAcc: {final_acc:.4f} | Val_Acc: {final_val_acc:.4f}"
+			ax2.set_title(title_acc, pad=15, fontsize=12)
+			ax2.set_xlabel("Epochs")
+			ax2.set_ylabel("Accuracy")
+			ax2.legend()
+			ax2.grid(True, alpha=0.3)
+		plt.tight_layout(pad=3.0, h_pad=4.0)
 		plt.show()
 	except Exception as e:
 		print(f"[WARNING] Unable to display learning curves plot: {e}", file=sys.stderr)
@@ -118,11 +120,11 @@ def main():
 	parser = argparse.ArgumentParser(description="Neural Network Training Script")
 	parser.add_argument("--train", type=str, required=True, help="Path to the training CSV dataset")
 	parser.add_argument("--val", type=str, required=True, help="Path to the validation CSV dataset")
-	parser.add_argument("--val_solution", type=str, required=True, help="Path to the solution CSV file for the validation set")
 	parser.add_argument("--epochs", type=int, default=70, help="Number of training epochs")
 	parser.add_argument("--batch_size", type=int, default=16, help="Mini-batch size")
 	parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
 	parser.add_argument("--save_path", type=str, default="saved_model.npy", help="Path to save the trained model")
+	parser.add_argument("--all", action="store_true", help="all actuivation function test")
 	args = parser.parse_args()
 	if args.epochs <= 0 or args.batch_size <= 0 or args.lr <= 0:
 		print("[ERROR] Epochs, batch size, and learning rate must be strictly positive.", file=sys.stderr)
@@ -130,10 +132,10 @@ def main():
 
 	#load Datasets
 	print(f"> Loading training dataset from '{args.train}'...")
-	X_train_raw, y_train = extract_data(args.train, solution_path=None)
+	X_train_raw, y_train = extract_data(args.train)
 	
-	print(f"> Loading validation dataset from '{args.val}' mapped with '{args.val_solution}'...")
-	X_val_raw, y_val = extract_data(args.val, solution_path=args.val_solution)
+	print(f"> Loading validation dataset from '{args.val}'...")
+	X_val_raw, y_val = extract_data(args.val)
 
 	#standardization
 	print("> Standardizing features...")
@@ -151,39 +153,48 @@ def main():
 		print(f"[ERROR] Failed to standardize data or save parameters: {e}", file=sys.stderr)
 		sys.exit(1)
 
-	#net init
-	try:
-		#30 inputs -> 24 hidden -> 24 hidden -> 2 outputs (Softmax)
-		layer_sizes = [30, 24, 24, 2]
-		activations = ["relu", "relu", "softmax"]
-		net = Network(layer_sizes, activations)
-	except Exception as e:
-		print(f"[ERROR] Network initialization failed: {e}", file=sys.stderr)
-		sys.exit(1)
-
-	#traning
 	print(f"> Starting training on {X_train.shape[0]} samples (validation: {X_val.shape[0]} samples)...")
-	try:
-		history = net.fit(
-			X_train, y_train,
-			X_val, y_val,
-			epochs=args.epochs,
-			batch_size=args.batch_size,
-			lr=args.lr
-		)
-	except Exception as e:
-		print(f"[ERROR] Training execution failed: {e}", file=sys.stderr)
-		sys.exit(1)
+	
+	# Détermination des activations à tester
+	activations_to_test = ["relu", "sigmoid", "tanh"] if args.all else ["relu"]
+	histories = {}
 
-	#save Model
-	try:
-		net.save(args.save_path)
-	except Exception as e:
-		print(f"[ERROR] Model saving failed: {e}", file=sys.stderr)
-		sys.exit(1)
+	for act in activations_to_test:
+		print(f"\n--- Entraînement avec l'activation : {act.upper()} ---")
+		#net init
+		try:
+			#30 inputs -> 24 hidden -> 24 hidden -> 2 outputs (Softmax)
+			layer_sizes = [30, 24, 24, 2]
+			activations = [act, act, "softmax"]
+			net = Network(layer_sizes, activations)
+		except Exception as e:
+			print(f"[ERROR] Network initialization failed: {e}", file=sys.stderr)
+			sys.exit(1)
 
-	#pplot Results
-	plot_learning_curves(history)
+		#traning
+		try:
+			history = net.fit(
+				X_train, y_train,
+				X_val, y_val,
+				epochs=args.epochs,
+				batch_size=args.batch_size,
+				lr=args.lr
+			)
+			histories[act] = history
+		except Exception as e:
+			print(f"[ERROR] Training execution failed: {e}", file=sys.stderr)
+			sys.exit(1)
+
+		#save Model
+		if act == "relu":
+			try:
+				net.save(args.save_path)
+			except Exception as e:
+				print(f"[ERROR] Model saving failed: {e}", file=sys.stderr)
+				sys.exit(1)
+
+	#plot Results
+	plot_learning_curves(histories)
 
 
 if __name__ == "__main__":

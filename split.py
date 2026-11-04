@@ -11,13 +11,15 @@
 # |                `\  }               |
 # |                  { }               |
 # |                                    |
-# | File    : describe.py              |
+# | File    : split.py                 |
 # | Login   : CHAT-DISPARU             |
 # | Email   : gaetanfranca@proton.me   |
-# | Created : 04/11/2026 12:40:24      |
-# | Updated : 04/11/2026 12:40:24      |
+# | Created : 04/11/2026 23:13:11      |
+# | Updated : 04/11/2026 23:13:11      |
 # | END HEADER                         |
 # +------------------------------------+
+
+
 
 
 import sys
@@ -87,15 +89,7 @@ def split_dataset(data, ratio, r):
 	with open("datasets/data_predict.csv", "w", newline="", encoding="utf-8") as f:
 		writer = csv.writer(f)
 		for i in predict_indices:
-			row = [data[col][i] for col in INFO]
-			row[1] = ""
-			writer.writerow(row)
-
-	with open("datasets/solution.csv", "w", newline="", encoding="utf-8") as f:
-		writer = csv.writer(f)
-		writer.writerow(["ID", "solution"])
-		for i in predict_indices:
-			writer.writerow([data["ID"][i], data["Diagnosis"][i]])
+			writer.writerow([data[col][i] for col in INFO])
 
 def main():
 	args = [a for a in sys.argv[1:] if a not in ("--help", "--rand")]
