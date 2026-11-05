@@ -123,7 +123,7 @@ def main():
 	parser.add_argument("--epochs", type=int, default=70, help="Number of training epochs")
 	parser.add_argument("--batch_size", type=int, default=16, help="Mini-batch size")
 	parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
-	parser.add_argument("--save_path", type=str, default="saved_model.npy", help="Path to save the trained model")
+	parser.add_argument("--save_path", type=str, default="saved_model", help="Path to save the trained model")
 	parser.add_argument("--all", action="store_true", help="all actuivation function test")
 	args = parser.parse_args()
 	if args.epochs <= 0 or args.batch_size <= 0 or args.lr <= 0:
@@ -155,7 +155,6 @@ def main():
 
 	print(f"> Starting training on {X_train.shape[0]} samples (validation: {X_val.shape[0]} samples)...")
 	
-	# Détermination des activations à tester
 	activations_to_test = ["relu", "sigmoid", "tanh"] if args.all else ["relu"]
 	histories = {}
 
@@ -186,12 +185,11 @@ def main():
 			sys.exit(1)
 
 		#save Model
-		if act == "relu":
-			try:
-				net.save(args.save_path)
-			except Exception as e:
-				print(f"[ERROR] Model saving failed: {e}", file=sys.stderr)
-				sys.exit(1)
+		try:
+			net.save(args.save_path + "_" + act + ".npy")
+		except Exception as e:
+			print(f"[ERROR] Model saving failed: {e}", file=sys.stderr)
+			sys.exit(1)
 
 	#plot Results
 	plot_learning_curves(histories)

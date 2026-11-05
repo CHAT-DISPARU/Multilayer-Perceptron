@@ -48,14 +48,14 @@ def load_dataset(path):
 
 
 def load_model(model_path, norm_path):
-	"""recharge le reseau et les parametres de standardisation du train"""
+	"""recharge le reseau et lstandardisation du train"""
 	net = Network.load(model_path)
 	params = np.load(norm_path)
 	return net, params["mean"], params["std"]
 
 
 def confusion(y_pred, y_true):
-	"""comptes avec M (maligne) comme classe positive"""
+	"""comptes avec M comme classe positive"""
 	pred_m = np.argmax(y_pred, axis=1) == 0
 	true_m = np.argmax(y_true, axis=1) == 0
 	tp = int(np.sum(pred_m & true_m))
