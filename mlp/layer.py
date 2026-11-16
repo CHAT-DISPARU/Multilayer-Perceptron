@@ -39,9 +39,16 @@ class Layer:
 		self.W = rng.uniform(-limite, limite, size=(n_out, n_in))
 		self.b = np.zeros(n_out)
 
+		self.dW = None
+		self.db = None
 		self.a_prev = None
 		self.z = None
 		self.a = None
+		self.mW = np.zeros_like(self.W)#1 moment WMomentum
+		self.vW = np.zeros_like(self.W)#2 moment W RMSprop
+		self.mb = np.zeros_like(self.b)#1 moment b
+		self.vb = np.zeros_like(self.b)#2 moment b
+		self.t = 0 #compteur d etapes
 
 	def forward(self, a_prev):
 		# a_prev a une forme (N, n_in) ou (n_in,)
@@ -63,17 +70,38 @@ class Layer:
 
 		return self.a
 
-	def backward(self, delta, lr):
-		#delta a une forme (N, n_out)
+	def backward(self, delta):
+		# delta a une forme (N, n_out)
 		N = delta.shape[0] if delta.ndim > 1 else 1
-		# dW = (n_out, N) @ (N, n_in) -> (n_out, n_in)
-		dW = (delta.T @ self.a_prev) / N
-		
-		# db = moyenne de l'erreur sur tout le lot -> (n_out,)
-		db = np.mean(delta, axis=0) if delta.ndim > 1 else delta
-		# propagation vers la couche précédente : (N, n_out) @ (n_out, n_in) -> (N, n_in)
+
+		# On stocke les gradients dans self.dW et self.db pour l'optimiseur
+		self.dW = (delta.T @ self.a_prev) / N
+		self.db = np.mean(delta, axis=0) if delta.ndim > 1 else delta
+
+		# Propagation vers la couche précédente : (N, n_out) @ (n_out, n_in) -> (N, n_in)
 		delta_prev = delta @ self.W
-		# Mise à jour des poids et biais
-		self.W -= lr * dW
-		self.b -= lr * db
+
+		return delta_prev
+
+
+	def backward_adam(self, delta, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
+		N = delta.shape[0] if delta.ndim > 1 else 1
+		dW = (delta.T @ self.a_prev) / N
+		db = np.mean(delta, axis=0) if delta.ndim > 1 else delta
+		delta_prev = delta @ self.W
+		self.t += 1
+		#mise a jour premier moment
+		self.mW = beta1 * self.mW + (1 - beta1) * dW
+		self.mb = beta1 * self.mb + (1 - beta1) * db
+		#mise a jour deuxieme moment
+		self.vW = beta2 * self.vW + (1 - beta2) * (dW ** 2)
+		self.vb = beta2 * self.vb + (1 - beta2) * (db ** 2)
+		#correction biais
+		mW_hat = self.mW / (1 - beta1 ** self.t)
+		mb_hat = self.mb / (1 - beta1 ** self.t)
+		vW_hat = self.vW / (1 - beta2 ** self.t)
+		vb_hat = self.vb / (1 - beta2 ** self.t)
+		self.W -= lr * mW_hat / (np.sqrt(vW_hat) + eps)
+		self.b -= lr * mb_hat / (np.sqrt(vb_hat) + eps)
+
 		return delta_prev

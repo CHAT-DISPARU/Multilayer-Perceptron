@@ -42,15 +42,16 @@ class Network:
 		for layer in self.layers:
 			a = layer.forward(a)
 		return a
-	def backward(self, y_pred, y_true, lr):
+
+	def backward(self, y_pred, y_true):
 		delta = y_pred - y_true
 		for i in range(len(self.layers) - 1, -1, -1):
-			delta = self.layers[i].backward(delta, lr)
+			delta = self.layers[i].backward(delta)
 
 			if i > 0:
 				delta *= activation_derivative(self.layers[i - 1].z, self.layers[i - 1].activation)
-	def fit(self, X, y, X_val, y_val, epochs, batch_size, lr):
-		#dico enregistre les metrique a chaqew epoch
+
+	def fit(self, X, y, X_val, y_val, epochs, batch_size, optimizer):
 		history = {
 			"loss": [],
 			"val_loss": [],
@@ -71,25 +72,29 @@ class Network:
 				y_batch = y_shuffled[i : i + batch_size]
 
 				y_pred = self.forward(X_batch)
-				self.backward(y_pred, y_batch, lr)
+				self.backward(y_pred, y_batch)
+				optimizer.step()
 
-			#eval sur toute les donne a la fin de l epoch
+			# eval sur toute les donne a la fin de l epoch
 			train_preds = self.predict(X)
 			val_preds = self.predict(X_val)
 			train_loss = binary_cross_entropy(train_preds, y)
 			val_loss = binary_cross_entropy(val_preds, y_val)
 			train_acc = compute_accuracy(train_preds, y)
 			val_acc = compute_accuracy(val_preds, y_val)
-			#sauvegarde
+
+			# sauvegarde
 			history["loss"].append(train_loss)
 			history["val_loss"].append(val_loss)
 			history["acc"].append(train_acc)
 			history["val_acc"].append(val_acc)
-			#truc du sujet
+
 			print(f"epoch {epoch:02d}/{epochs} - loss: {train_loss:.4f} - val_loss: {val_loss:.4f} - acc: {train_acc:.4f} - val_acc: {val_acc:.4f}")
 		return history
+
 	def predict(self, X):
 		return self.forward(X)
+
 	def save(self, chemin):
 		model_data = {
 			"tailles": [layer.n_in for layer in self.layers] + [self.layers[-1].n_out],
