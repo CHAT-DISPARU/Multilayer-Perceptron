@@ -817,8 +817,3 @@ Each training writes a `*_history.json` containing the optimizer, the activation
 - Variance : [https://en.wikipedia.org/wiki/Variance](https://en.wikipedia.org/wiki/Variance)
 - Standard deviation : [https://en.wikipedia.org/wiki/Standard_deviation](https://en.wikipedia.org/wiki/Standard_deviation)
 - Standard score (standardization) : [https://en.wikipedia.org/wiki/Standard_score](https://en.wikipedia.org/wiki/Standard_score)
-
-**Numerical computing**
-
-- Numerical stability : [https://en.wikipedia.org/wiki/Numerical_stability](https://en.wikipedia.org/wiki/Numerical_stability)
-- Arithmetic overflow : [https://en.wikipedia.org/wiki/Arithmetic_overflow](https://en.wikipedia.org/wiki/Arithmetic_overflow)
