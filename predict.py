@@ -25,7 +25,7 @@ import argparse
 import csv
 import sys
 import numpy as np
-
+from mlp.losses import binary_cross_entropy, compute_accuracy, confusion_counts, precision_recall_f1
 from mlp.csv_reader import load_csv
 from mlp.losses import binary_cross_entropy, compute_accuracy
 from mlp.network import Network
@@ -47,11 +47,9 @@ def load_dataset(path):
 	return columns["ID"], X, np.array(y)
 
 
-def load_model(model_path, norm_path):
-	"""recharge le reseau et lstandardisation du train"""
-	net = Network.load(model_path)
-	params = np.load(norm_path)
-	return net, params["mean"], params["std"]
+def load_model(model_path):
+    """recharge le reseau (poids + standardisation du train)"""
+    return Network.load(model_path)
 
 
 def confusion(y_pred, y_true):
@@ -78,17 +76,18 @@ def main():
 	parser = argparse.ArgumentParser(description="Neural Network Prediction Script")
 	parser.add_argument("--dataset", required=True, help="CSV dataset (same format as the training data)")
 	parser.add_argument("--model", required=True, help="Path to the saved model")
-	parser.add_argument("--norm", required=True, help="Path to the normalization parameters")
 	parser.add_argument("--output", default="predictions.csv", help="Path of the predictions file")
 	args = parser.parse_args()
 
 	try:
-		net, mean, std = load_model(args.model, args.norm)
+		net = load_model(args.model)
 		ids, X_raw, y_true = load_dataset(args.dataset)
-		if X_raw.shape[1] != mean.shape[0] or X_raw.shape[1] != net.layers[0].n_in:
+		if net.mean is None or net.std is None:
+			raise ValueError("Model has no normalization parameters: retrain it with the current training.py")
+		if X_raw.shape[1] != net.mean.shape[0] or X_raw.shape[1] != net.layers[0].n_in:
 			raise ValueError(
 				f"Dataset has {X_raw.shape[1]} features, "
-				f"model expects {net.layers[0].n_in} (normalization: {mean.shape[0]})"
+				f"model expects {net.layers[0].n_in} (normalization: {net.mean.shape[0]})"
 			)
 	except FileNotFoundError as e:
 		print(f"[ERROR] File not found: '{e.filename}'", file=sys.stderr)
@@ -97,18 +96,19 @@ def main():
 		print(f"[ERROR] {e}", file=sys.stderr)
 		sys.exit(1)
 
-	X = (X_raw - mean) / std
+	X = net.normalize(X_raw)
 	y_pred = net.predict(X)
 
 	loss = binary_cross_entropy(y_pred, y_true)
 	acc = compute_accuracy(y_pred, y_true)
-	tp, fp, fn, tn = confusion(y_pred, y_true)
+	tp, fp, fn, tn = confusion_counts(y_pred, y_true)
+	precision, recall, f1 = precision_recall_f1(y_pred, y_true)
 
 	print(f"> {X.shape[0]} samples loaded from '{args.dataset}'")
 	print(f"> binary cross-entropy: {loss:.4f}")
 	print(f"> accuracy: {acc * 100:.2f} %")
 	print(f"> malignant detected: {tp}  missed: {fn}  false alarms: {fp}  correct benign: {tn}")
-
+	print(f"> precision: {precision:.4f}  recall: {recall:.4f}  f1: {f1:.4f}")
 	save_predictions(args.output, ids, y_pred)
 	print(f"> predictions saved to '{args.output}'")
 

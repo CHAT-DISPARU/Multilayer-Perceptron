@@ -37,14 +37,35 @@ def binary_cross_entropy(y_pred, y_true, epsilon=1e-15):
 	return loss
 
 def compute_accuracy(y_pred, y_true):
-    # Cas Softmax avec 2 sorties One-Hot (ex: [0, 1] vs [1, 0])
-    if y_pred.ndim == 2 and y_pred.shape[1] == 2:
-        pred_labels = np.argmax(y_pred, axis=1)
-        true_labels = np.argmax(y_true, axis=1)
-    # Cas Sigmoïde avec 1 seule sortie probabilité (0 à 1)
-    else:
-        pred_labels = (y_pred >= 0.5).astype(int)
-        true_labels = y_true
+	# Cas Softmax avec 2 sorties One-Hot (ex: [0, 1] vs [1, 0])
+	if y_pred.ndim == 2 and y_pred.shape[1] == 2:
+		pred_labels = np.argmax(y_pred, axis=1)
+		true_labels = np.argmax(y_true, axis=1)
+	# Cas Sigmoïde avec 1 seule sortie probabilité (0 à 1)
+	else:
+		pred_labels = (y_pred >= 0.5).astype(int)
+		true_labels = y_true
 
-    #moyenne des égalités fraction de prédictions correctes 0 1
-    return np.mean(pred_labels == true_labels)
+	#moyenne des égalités fraction de prédictions correctes 0 1
+	return np.mean(pred_labels == true_labels)
+
+def confusion_counts(y_pred, y_true):
+	"""comptes (tp, fp, fn, tn) avec M (colonne 0) comme classe positive"""
+	pred_m = np.argmax(y_pred, axis=1) == 0
+	true_m = np.argmax(y_true, axis=1) == 0
+	tp = int(np.sum(pred_m & true_m))
+	fp = int(np.sum(pred_m & ~true_m))
+	fn = int(np.sum(~pred_m & true_m))
+	tn = int(np.sum(~pred_m & ~true_m))
+	return tp, fp, fn, tn
+
+
+def precision_recall_f1(y_pred, y_true):
+	tp, fp, fn, _ = confusion_counts(y_pred, y_true)
+	precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+	recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+	if precision + recall > 0:
+		f1 = 2 * precision * recall / (precision + recall)
+	else:
+		f1 = 0.0
+	return precision, recall, f1

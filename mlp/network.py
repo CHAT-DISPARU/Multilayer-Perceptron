@@ -23,12 +23,13 @@ from .layer import Layer
 import numpy as np
 from .losses import binary_cross_entropy, compute_accuracy
 from .activations import relu, sigmoid, softmax, activation_derivative
-
+from .losses import binary_cross_entropy, compute_accuracy, precision_recall_f1
 
 class Network:
 	def __init__(self, tailles, activations):
 		self.layers = []
-
+		self.mean = None
+		self.std = None
 		for i in range(len(tailles) - 1):
 			layer = Layer(
 				tailles[i],
@@ -51,16 +52,25 @@ class Network:
 			if i > 0:
 				delta *= activation_derivative(self.layers[i - 1].z, self.layers[i - 1].activation)
 
-	def fit(self, X, y, X_val, y_val, epochs, batch_size, optimizer):
+	def fit(self, X, y, X_val, y_val, epochs, batch_size, optimizer, patience=0):
 		history = {
 			"loss": [],
 			"val_loss": [],
 			"acc": [],
-			"val_acc": []
+			"val_acc": [],
+			"precision": [],
+			"val_precision": [],
+			"recall": [],
+			"val_recall": [],
+			"f1": [],
+			"val_f1": []
 		}
 
 		n_samples = X.shape[0]
-
+		best_val_loss = float("inf")
+		best_weights = None
+		best_epoch = 0
+		wait = 0
 		for epoch in range(1, epochs + 1):
 			indices = np.random.permutation(n_samples)
 			X_shuffled = X[indices]
@@ -82,15 +92,49 @@ class Network:
 			val_loss = binary_cross_entropy(val_preds, y_val)
 			train_acc = compute_accuracy(train_preds, y)
 			val_acc = compute_accuracy(val_preds, y_val)
-
+			train_p, train_r, train_f1 = precision_recall_f1(train_preds, y)
+			val_p, val_r, val_f1 = precision_recall_f1(val_preds, y_val)
 			# sauvegarde
 			history["loss"].append(train_loss)
 			history["val_loss"].append(val_loss)
 			history["acc"].append(train_acc)
 			history["val_acc"].append(val_acc)
+			history["precision"].append(train_p)
+			history["val_precision"].append(val_p)
+			history["recall"].append(train_r)
+			history["val_recall"].append(val_r)
+			history["f1"].append(train_f1)
+			history["val_f1"].append(val_f1)
 
-			print(f"epoch {epoch:02d}/{epochs} - loss: {train_loss:.4f} - val_loss: {val_loss:.4f} - acc: {train_acc:.4f} - val_acc: {val_acc:.4f}")
+			print(f"epoch {epoch:02d}/{epochs} - loss: {train_loss:.4f} - val_loss: {val_loss:.4f} - acc: {train_acc:.4f} - val_acc: {val_acc:.4f}"
+				  f" - val_precision: {val_p:.4f} - val_recall: {val_r:.4f} - val_f1: {val_f1:.4f}")
+			if patience > 0:
+				if val_loss < best_val_loss:
+					best_val_loss = val_loss
+					best_epoch = epoch
+					best_weights = [(l.W.copy(), l.b.copy()) for l in self.layers]
+					wait = 0
+				else:
+					wait += 1
+					if wait >= patience:
+						print(f"early stopping at epoch {epoch} (best epoch: {best_epoch}, val_loss: {best_val_loss:.4f})")
+						break
+		if best_weights is not None:
+			for layer, (W, b) in zip(self.layers, best_weights):
+				layer.W = W
+				layer.b = b
+			print(f"> best weights restored (epoch {best_epoch})")
+		history["best_epoch"] = best_epoch if best_weights is not None else None
 		return history
+
+	def set_normalization(self, mean, std):
+		self.mean = mean
+		self.std = std
+
+	def normalize(self, X):
+		if self.mean is None or self.std is None:
+			raise ValueError("Model has no normalization parameters (retrain it)")
+		return (X - self.mean) / self.std
 
 	def predict(self, X):
 		return self.forward(X)
@@ -100,7 +144,9 @@ class Network:
 			"tailles": [layer.n_in for layer in self.layers] + [self.layers[-1].n_out],
 			"activations": [layer.activation for layer in self.layers],
 			"weights": [layer.W for layer in self.layers],
-			"biases": [layer.b for layer in self.layers]
+			"biases": [layer.b for layer in self.layers],
+			"mean": self.mean,
+			"std": self.std
 		}
 		np.save(chemin, model_data, allow_pickle=True)
 		print(f"> saving model '{chemin}' to disk...")
@@ -112,4 +158,6 @@ class Network:
 		for layer, W, b in zip(network.layers, model_data["weights"], model_data["biases"]):
 			layer.W = W
 			layer.b = b
+		network.mean = model_data.get("mean")
+		network.std = model_data.get("std")
 		return network
