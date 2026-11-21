@@ -124,6 +124,7 @@ Le projet est **modulaire** : l'architecture du réseau (nombre et taille des co
 ### Dépendances
 
 ```bash
+python3 -m venv venv && source venv/bin/activate
 pip install numpy matplotlib
 ```
 
