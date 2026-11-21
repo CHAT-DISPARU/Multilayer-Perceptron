@@ -124,6 +124,7 @@ The project is **modular** : the architecture of the network (number and size of
 ### Dependencies
 
 ```bash
+python3 -m venv venv && source venv/bin/activate
 pip install numpy matplotlib
 ```
 
