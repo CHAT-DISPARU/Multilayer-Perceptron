@@ -1,3 +1,5 @@
+🇬🇧 English | [🇫🇷 Français](README.fr.md)
+
 # Multilayer Perceptron : breast cancer detection
 
 A neural network **written from scratch with NumPy** (without TensorFlow, PyTorch or scikit-learn) that learns to classify a breast tumor as **malignant (M)** or **benign (B)** from measurements made on cell images.
