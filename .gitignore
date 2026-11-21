@@ -1,3 +1,10 @@
-venv/
 __pycache__/
 *.pyc
+saved_model*
+*_history.json
+*.npy
+predictions.csv
+datasets/data_train.csv
+datasets/data_predict.csv
+venv/
+.venv/

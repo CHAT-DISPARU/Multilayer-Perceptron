@@ -21,8 +21,7 @@
 
 from .layer import Layer
 import numpy as np
-from .losses import binary_cross_entropy, compute_accuracy
-from .activations import relu, sigmoid, softmax, activation_derivative
+from .activations import activation_derivative
 from .losses import binary_cross_entropy, compute_accuracy, precision_recall_f1
 
 class Network:

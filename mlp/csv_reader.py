@@ -21,18 +21,6 @@
 
 import csv
 
-def to_float(cellule):
-	"""str->float None si vide non num ou NaN."""
-	cellule = cellule.strip()
-	if cellule == "":
-		return None
-	try:
-		valeur = float(cellule)
-	except ValueError:
-		return None
-	if valeur != valeur:
-		return None
-	return valeur
 
 def load_csv(path, info, allow_empty_diagnosis=False):
 	colonnes = {nom: [] for nom in info}
@@ -45,15 +33,16 @@ def load_csv(path, info, allow_empty_diagnosis=False):
 			for nom, cellule in zip(info, ligne):
 				cellule = cellule.strip()
 				if not cellule:
-					if nom == "Diagnosis" and allow_empty_diagnosis:
-						colonnes[nom].append("")
-						continue
+					raise ValueError(f"Missing value at line {num_ligne}: {nom}")
 
 					raise ValueError(f"Missing value at line {num_ligne}: {nom}")
 				if cellule.lower() == "null":
 					raise ValueError(f"Null value at line {num_ligne}: {nom}")
 				if nom not in ("ID", "Diagnosis"):
-					cellule = float(cellule)
+					try:
+						cellule = float(cellule)
+					except ValueError:
+						raise ValueError(f"Invalid number at line {num_ligne}: {nom} ('{cellule}')")
 				colonnes[nom].append(cellule)
 	if not any(colonnes.values()):
 		raise ValueError("CSV file is empty")
