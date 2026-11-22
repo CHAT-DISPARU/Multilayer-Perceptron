@@ -100,7 +100,7 @@ def _check(cfg):
 
 
 def start(payload):
-	"""valide charge les données  lance le thread"""
+	"""valide charge les donnees  lance le thread"""
 	global _thread
 	with _lock:
 		if _state.get("status") == "running":
@@ -172,7 +172,7 @@ def _run(net, optimizer, cfg, train, val):
 							_state["early_stopped"] = True
 						_log(f"early stopping at epoch {ep} (best epoch: {best_epoch}, val_loss: {best:.4f})")
 						break
-		if best_w is not None:                      # même comportement que training.py : on restaure le meilleur
+		if best_w is not None:# restore meilleur comme training.py
 			for layer, (W, b) in zip(net.layers, best_w):
 				layer.W, layer.b = W, b
 			_log(f"> best weights restored (epoch {best_epoch})")
@@ -192,7 +192,7 @@ def _run(net, optimizer, cfg, train, val):
 			_state["model_file"] = path
 			_state["history_file"] = hist_path
 			_state["status"] = "stopped" if _stop.is_set() else "done"
-	except Exception as e:                          # le thread ne doit jamais mourir en silence
+	except Exception as e:#pas mort silence
 		with _lock:
 			_state["status"] = "error"
 			_state["error"] = str(e)
@@ -209,7 +209,7 @@ def stop(_payload=None):
 
 
 def predict(payload):
-	"""même calculs et même fichier de sortie que predict.py"""
+	"""meme predict.py"""
 	if _net is None:
 		raise ValueError("Train a model first")
 	if _state.get("status") == "running":

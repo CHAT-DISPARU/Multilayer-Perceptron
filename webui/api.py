@@ -36,13 +36,13 @@ def _read(path):
 
 
 def inspect(payload):
-	"""infos sur la base : sert à régler la barre coulissante"""
+	"""sert à  la barre coulissante"""
 	diag = _read(payload.get("path"))["Diagnosis"]
 	return {"total": len(diag), "malignant": diag.count("M"), "benign": diag.count("B")}
 
 
 def split(payload):
-	"""appelle le vrai split_dataset de split.py"""
+	"""appelle vrai split_dataset split.py"""
 	data = _read(payload.get("path"))
 	ratio = float(payload.get("ratio", 0.8))
 	if not 0 < ratio < 1:

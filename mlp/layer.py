@@ -46,9 +46,8 @@ class Layer:
 		self.a = None
 
 	def forward(self, a_prev):
-		# a_prev a une forme (N, n_in) ou (n_in,)
+		#a_prev a une forme (N, n_in) ou (n_in,)
 		self.a_prev = a_prev
-		
 		#produit matriceille de con : (N, n_in) @ (n_in, n_out) -> (N, n_out)
 		self.z = a_prev @ self.W.T + self.b
 
@@ -66,14 +65,11 @@ class Layer:
 		return self.a
 
 	def backward(self, delta):
-		# delta a une forme (N, n_out)
+		#delta a une forme (N, n_out)
 		N = delta.shape[0] if delta.ndim > 1 else 1
-
-		# On stocke les gradients dans self.dW et self.db pour l'optimiseur
 		self.dW = (delta.T @ self.a_prev) / N
 		self.db = np.mean(delta, axis=0) if delta.ndim > 1 else delta
-
-		# Propagation vers la couche précédente : (N, n_out) @ (n_out, n_in) -> (N, n_in)
+		#p ropagation vers la couche précédente(N, n_out) @ (n_out, n_in) -> (N, n_in)
 		delta_prev = delta @ self.W
 
 		return delta_prev

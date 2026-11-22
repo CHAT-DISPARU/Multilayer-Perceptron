@@ -73,13 +73,9 @@ def softmax(z):
 
 def softmax_derivative(z):
 	"""Calcule la matrice jacobienne de la fonction softmax pour un vecteur z."""
-	# 1. Calculer d'abord le softmax du vecteur
 	s = softmax(z)
-	# 2. Transformer le vecteur s en une matrice diagonale (s_i si i==j)
 	diag_s = np.diag(s)
-	# 3. Calculer le produit extérieur (s_i * s_j pour tout i, j)
 	outer_s = np.outer(s, s)
-	# 4. Appliquer la formule : s_i * delta_ij - s_i * s_j
 	return diag_s - outer_s
 
 

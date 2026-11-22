@@ -78,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
 			self._send(400, {"error": str(e)})
 
 	def log_message(self, *args):
-		pass  # silence les logs HTTP dans le terminal
+		pass
 
 
 def main():
