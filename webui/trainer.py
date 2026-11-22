@@ -26,7 +26,7 @@ from contextlib import redirect_stdout
 
 import numpy as np
 
-from mlp.losses import binary_cross_entropy, compute_accuracy, confusion_counts, precision_recall_f1
+from mlp.losses import LOSSES as LOSS_FUNCS, compute_accuracy, confusion_counts, get_loss, precision_recall_f1
 from mlp.network import Network
 from mlp.optimiseur import Adam, SGD
 from predict import load_dataset, save_predictions
@@ -35,7 +35,7 @@ METRICS = ["loss", "val_loss", "acc", "val_acc", "precision", "val_precision",
 		   "recall", "val_recall", "f1", "val_f1"]
 ACTS = ("relu", "sigmoid", "tanh")
 OPTS = ("adam", "sgd")
-LOSSES = ("categoricalCrossentropy", "binaryCrossentropy")
+LOSSES = tuple(LOSS_FUNCS)
 
 _lock = threading.Lock()
 _stop = threading.Event()
@@ -121,6 +121,7 @@ def start(payload):
 	std[std == 0] = 1e-8
 	net = Network([X_raw.shape[1]] + cfg["layers"] + [2], [cfg["act"]] * len(cfg["layers"]) + ["softmax"])
 	net.set_normalization(mean, std)
+	net.loss = cfg["loss"]
 	opt_cls = Adam if cfg["opt"] == "adam" else SGD
 	optimizer = opt_cls(net.layers, lr=cfg["lr"])
 
@@ -150,7 +151,7 @@ def _run(net, optimizer, cfg, train, val):
 			if _stop.is_set():
 				break
 			with redirect_stdout(io.StringIO()):
-				h = net.fit(X, y, Xv, yv, epochs=1, batch_size=cfg["batch"], optimizer=optimizer, patience=0)
+				h = net.fit(X, y, Xv, yv, epochs=1, batch_size=cfg["batch"], optimizer=optimizer, patience=0, loss=cfg["loss"])
 			with _lock:
 				for k in METRICS:
 					_state["history"][k].append(float(h[k][0]))
@@ -228,7 +229,7 @@ def predict(payload):
 			 "p_m": float(q[0]), "p_b": float(q[1])}
 			for i, t, p, q in zip(ids, truth, labels, y_pred)]
 	return {"samples": int(X_raw.shape[0]), "dataset": path, "output": "predictions.csv",
-			"loss": float(binary_cross_entropy(y_pred, y_true)),
+			"loss": float(get_loss(_net.loss)(y_pred, y_true)), "loss_name": _net.loss,
 			"accuracy": float(compute_accuracy(y_pred, y_true)),
 			"tp": tp, "fp": fp, "fn": fn, "tn": tn,
 			"precision": float(precision), "recall": float(recall), "f1": float(f1),

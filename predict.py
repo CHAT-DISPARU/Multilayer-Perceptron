@@ -14,10 +14,11 @@
 # | File    : predict.py               |
 # | Login   : CHAT-DISPARU             |
 # | Email   : gaetanfranca@proton.me   |
-# | Created : 04/11/2026 23:13:17      |
-# | Updated : 04/11/2026 23:13:17      |
+# | Created : 22/11/2026 16:51:56      |
+# | Updated : 22/11/2026 16:51:56      |
 # | END HEADER                         |
 # +------------------------------------+
+
 
 
 
@@ -27,7 +28,7 @@ import sys
 import numpy as np
 from mlp.columns import INFO
 from mlp.csv_reader import load_csv
-from mlp.losses import binary_cross_entropy, compute_accuracy, confusion_counts, precision_recall_f1
+from mlp.losses import LOSSES, compute_accuracy, confusion_counts, get_loss, precision_recall_f1
 from mlp.network import Network
 
 
@@ -76,6 +77,8 @@ def main():
 	parser.add_argument("--dataset", required=True, help="CSV dataset (same format as the training data)")
 	parser.add_argument("--model", required=True, help="Path to the saved model")
 	parser.add_argument("--output", default="predictions.csv", help="Path of the predictions file")
+	parser.add_argument("--loss", choices=list(LOSSES), default=None,
+			help="Loss to report (default: the one used to train the model)")
 	args = parser.parse_args()
 
 	try:
@@ -98,13 +101,14 @@ def main():
 	X = net.normalize(X_raw)
 	y_pred = net.predict(X)
 
-	loss = binary_cross_entropy(y_pred, y_true)
+	loss_name = args.loss or net.loss
+	loss = get_loss(loss_name)(y_pred, y_true)
 	acc = compute_accuracy(y_pred, y_true)
 	tp, fp, fn, tn = confusion_counts(y_pred, y_true)
 	precision, recall, f1 = precision_recall_f1(y_pred, y_true)
 
 	print(f"> {X.shape[0]} samples loaded from '{args.dataset}'")
-	print(f"> binary cross-entropy: {loss:.4f}")
+	print(f"> {loss_name}: {loss:.4f}")
 	print(f"> accuracy: {acc * 100:.2f} %")
 	print(f"> malignant detected: {tp}  missed: {fn}  false alarms: {fp}  correct benign: {tn}")
 	print(f"> precision: {precision:.4f}  recall: {recall:.4f}  f1: {f1:.4f}")

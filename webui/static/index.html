@@ -722,7 +722,7 @@ function renderPred(d) {
 		<div class="h">True B</div><div class="bad"><b>${d.fp}</b>false alarms</div><div class="ok"><b>${d.tn}</b>correct benign</div>`;
 	$("#p-term").textContent = [
 		`> ${d.samples} samples loaded from '${d.dataset}'`,
-		`> binary cross-entropy: ${d.loss.toFixed(4)}`,
+		`> ${d.loss_name || "binary cross-entropy"}: ${d.loss.toFixed(4)}`,
 		`> accuracy: ${(100 * d.accuracy).toFixed(2)} %`,
 		`> malignant detected: ${d.tp}  missed: ${d.fn}  false alarms: ${d.fp}  correct benign: ${d.tn}`,
 		`> precision: ${d.precision.toFixed(4)}  recall: ${d.recall.toFixed(4)}  f1: ${d.f1.toFixed(4)}`,

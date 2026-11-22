@@ -14,8 +14,8 @@
 # | File    : training.py              |
 # | Login   : CHAT-DISPARU             |
 # | Email   : gaetanfranca@proton.me   |
-# | Created : 04/11/2026 17:27:46      |
-# | Updated : 04/11/2026 17:27:46      |
+# | Created : 22/11/2026 16:51:37      |
+# | Updated : 22/11/2026 16:51:37      |
 # | END HEADER                         |
 # +------------------------------------+
 
@@ -224,7 +224,8 @@ def main():
 					epochs=args.epochs,
 					batch_size=args.batch_size,
 					optimizer=optimizer,
-					patience=args.patience
+					patience=args.patience,
+					loss=args.loss
 				)
 				histories[opt_name][act] = history
 			except Exception as e:

@@ -14,8 +14,8 @@
 # | File    : losses.py                |
 # | Login   : CHAT-DISPARU             |
 # | Email   : gaetanfranca@proton.me   |
-# | Created : 04/11/2026 12:57:04      |
-# | Updated : 04/11/2026 12:57:04      |
+# | Created : 22/11/2026 16:50:31      |
+# | Updated : 22/11/2026 16:50:31      |
 # | END HEADER                         |
 # +------------------------------------+
 
@@ -35,6 +35,23 @@ def binary_cross_entropy(y_pred, y_true, epsilon=1e-15):
 	# perte moyenne
 	loss = -np.mean(y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
 	return loss
+
+def categorical_cross_entropy(y_pred, y_true, epsilon=1e-15):
+	"""-sum_i y_i * ln(p_i), moyenne sur les echantillons (sortie softmax, labels one-hot)"""
+	y_pred = np.clip(y_pred, epsilon, 1.0 - epsilon)
+	return -np.mean(np.sum(y_true * np.log(y_pred), axis=1))
+
+# nom donne en ligne de commande / interface -> fonction
+LOSSES = {
+	"categoricalCrossentropy": categorical_cross_entropy,
+	"binaryCrossentropy": binary_cross_entropy,
+}
+
+def get_loss(name):
+	try:
+		return LOSSES[name]
+	except KeyError:
+		raise ValueError(f"Unknown loss '{name}'. Expected one of: {', '.join(LOSSES)}")
 
 def compute_accuracy(y_pred, y_true):
 	# Cas Softmax avec 2 sorties One-Hot (ex: [0, 1] vs [1, 0])
