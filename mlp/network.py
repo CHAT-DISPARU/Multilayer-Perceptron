@@ -94,6 +94,8 @@ class Network:
 			val_preds = self.predict(X_val)
 			train_loss = loss_fn(train_preds, y)
 			val_loss = loss_fn(val_preds, y_val)
+			if not (np.isfinite(train_loss) and np.isfinite(val_loss)):
+				raise ValueError("Loss diverged (NaN/inf): lower the learning rate")
 			train_acc = compute_accuracy(train_preds, y)
 			val_acc = compute_accuracy(val_preds, y_val)
 			train_p, train_r, train_f1 = precision_recall_f1(train_preds, y)

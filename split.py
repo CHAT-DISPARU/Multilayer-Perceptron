@@ -112,4 +112,8 @@ All feature values are recoded with four significant digits.
 	split_dataset(colonnes, ratio, r)
 	
 if __name__ == "__main__":
-	main()
+	try:
+		main()
+	except KeyboardInterrupt:
+		print("\n> interrupted", file=sys.stderr)
+		sys.exit(130)

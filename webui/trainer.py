@@ -152,6 +152,8 @@ def _run(net, optimizer, cfg, train, val):
 				break
 			with redirect_stdout(io.StringIO()):
 				h = net.fit(X, y, Xv, yv, epochs=1, batch_size=cfg["batch"], optimizer=optimizer, patience=0, loss=cfg["loss"])
+			if not (np.isfinite(h["loss"][0]) and np.isfinite(h["val_loss"][0])):
+				raise ValueError("Loss diverged (NaN/inf): lower the learning rate")
 			with _lock:
 				for k in METRICS:
 					_state["history"][k].append(float(h[k][0]))

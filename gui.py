@@ -21,7 +21,9 @@
 
 import json
 import os
+import sys
 import threading
+import csv
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -68,9 +70,11 @@ class Handler(BaseHTTPRequestHandler):
 			length = int(self.headers.get("Content-Length", 0))
 			payload = json.loads(self.rfile.read(length) or b"{}")
 			self._send(200, handler(payload))
+		except (BrokenPipeError, ConnectionResetError):
+			pass
 		except json.JSONDecodeError:
 			self._send(400, {"error": "invalid JSON"})
-		except (ValueError, OSError, KeyError) as e:
+		except (ValueError, OSError, KeyError, TypeError, AttributeError, csv.Error) as e:
 			self._send(400, {"error": str(e)})
 
 	def log_message(self, *args):
@@ -78,8 +82,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-	os.chdir(ROOT)  # split.py écrit dans ./datasets : on veut la racine du projet
-	server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+	os.chdir(ROOT)
+	try:
+		server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+	except OSError as e:
+		print(f"[ERROR] Cannot start the server on port {PORT}: {e.strerror}", file=sys.stderr)
+		print(f"> Another instance is probably already running (try: lsof -i :{PORT})", file=sys.stderr)
+		sys.exit(1)
 	url = f"http://127.0.0.1:{PORT}"
 	print(f"> MLP Studio running on {url} (Ctrl+C to stop)")
 	threading.Timer(0.5, webbrowser.open, args=(url,)).start()
