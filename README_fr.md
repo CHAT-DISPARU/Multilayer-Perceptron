@@ -55,6 +55,7 @@ Un réseau de neurones peut apprendre, à partir de centaines de cas déjà diag
 1. `split.py` découpe le jeu de données en un jeu d'**entraînement** et un jeu de **validation/prédiction**.
 2. `training.py` entraîne le réseau, affiche les courbes d'apprentissage et sauvegarde le modèle.
 3. `predict.py` recharge le modèle et prédit le diagnostic de nouvelles données.
+4. `gui.py` (optionnel) lance une petite interface web locale qui fait la même chose visuellement.
 
 ---
 
@@ -102,14 +103,25 @@ Environ 63 % des cas sont bénins. Un « modèle » qui répondrait toujours *b�
 ├── split.py              # découpe data.csv en train / validation
 ├── training.py           # entraîne le réseau, trace les courbes, sauvegarde
 ├── predict.py            # charge un modèle et prédit sur un CSV
+├── gui.py                # (optionnel) mini serveur web de l'interface
+├── launch.sh             # lanceur : Linux
+├── launch.command        # lanceur : macOS
+├── launch.bat            # lanceur : Windows
+├── requirements.txt      # dépendances installées par les lanceurs
 ├── mlp/
 │   ├── __init__.py
+│   ├── columns.py        # noms des 32 colonnes du CSV
 │   ├── csv_reader.py     # lecture et validation stricte du CSV
 │   ├── activations.py    # relu, sigmoid, tanh, softmax + dérivées
 │   ├── layer.py          # une couche dense : forward / backward
 │   ├── network.py        # empile les couches, fit, save, load
 │   ├── losses.py         # binary cross-entropy, accuracy, précision, rappel, F1
 │   └── optimiseur.py     # SGD et Adam
+├── webui/                # code de l'interface (optionnel)
+│   ├── api.py            # routes : inspect, split, train, status, stop, predict
+│   ├── trainer.py        # entraînement en arrière-plan, statut, prédiction
+│   └── static/
+│       └── index.html    # la page (HTML, CSS et JavaScript)
 └── datasets/             # créé par split.py
     ├── data_train.csv
     └── data_predict.csv
@@ -121,12 +133,25 @@ Le projet est **modulaire** : l'architecture du réseau (nombre et taille des co
 
 ## 4. Installation et utilisation
 
-### Dépendances
+### Lancement
+
+Les scripts de lancement créent un environnement virtuel (`venv`), installent les dépendances de `requirements.txt`, puis démarrent l'interface sur `http://127.0.0.1:8765` et l'ouvrent dans le navigateur.
+
+**macOS et Linux** : rendre les scripts exécutables (une seule fois), puis les lancer.
 
 ```bash
-python3 -m venv venv && source venv/bin/activate
-pip install numpy matplotlib
+chmod +x launch.sh launch.command
+./launch.sh             # Linux
+./launch.command        # macOS (ou double-clic)
 ```
+
+**Windows** :
+
+```bat
+launch.bat
+```
+
+Pour utiliser les programmes en ligne de commande ci-dessous, activer l'environnement créé par le script : `source venv/bin/activate` (macOS, Linux) ou `venv\Scripts\activate` (Windows).
 
 ### Étape 1 : découper les données
 
@@ -158,7 +183,9 @@ python training.py --train datasets/data_train.csv --val datasets/data_predict.c
 | `--epochs` | `70` | nombre de passages complets sur les données |
 | `--batch_size` | `16` | taille des mini-batchs |
 | `--lr` / `--learning_rate` | `0.001` (Adam), `0.01` (SGD) | pas d'apprentissage |
-| `--optimizer` | `adam` | `adam` ou `sgd` |
+| `--optimizer` | `sgd` | `adam` ou `sgd` |
+| `--activation` | `relu` | activation des couches cachées : `relu`, `sigmoid` ou `tanh` (ignoré avec `--all`) |
+| `--loss` | `categoricalCrossentropy` | `categoricalCrossentropy` ou `binaryCrossentropy` (identiques avec une softmax à 2 sorties, voir la [section 8](#8-mesurer-lerreur--la-fonction-de-coût)) |
 | `--patience` | `0` (désactivé) | early stopping : arrêt après N epochs sans amélioration |
 | `--save_path` | `saved_model` | préfixe des fichiers sauvegardés |
 | `--all` | non | compare ReLU / Sigmoid / Tanh avec SGD et Adam |
@@ -175,6 +202,30 @@ python predict.py --dataset datasets/data_predict.csv --model saved_model_adam_r
 ```
 
 Le script affiche la binary cross-entropy, l'accuracy, la matrice de confusion, la précision, le rappel et le F1, puis écrit `predictions.csv` (colonnes `ID, Prediction, P_M, P_B`).
+
+### L'interface graphique (optionnelle)
+
+L'interface n'ajoute rien aux maths : c'est seulement une façon plus rapide de lancer les mêmes programmes et de regarder le réseau apprendre. Elle réutilise le code du projet (`split_dataset` de `split.py`, `Network`, `Adam`, `SGD`, `load_dataset` et `save_predictions` de `predict.py`) et produit les mêmes fichiers (`datasets/data_*.csv`, `saved_model_*.npy`, `*_history.json`, `predictions.csv`).
+
+**Comment marche le mini serveur**
+
+```
+navigateur (webui/static/index.html)  ──  requêtes JSON  ──►  gui.py  ──►  webui/api.py  ──►  webui/trainer.py  ──►  mlp/
+```
+
+- `gui.py` est un serveur écrit avec la bibliothèque standard seulement (`http.server`) : aucune dépendance en plus. Il écoute sur `127.0.0.1:8765` (cet ordinateur uniquement), sert la page et répond à des requêtes `POST` qui transportent du JSON.
+- `webui/api.py` associe chaque route à une fonction : `/api/inspect` (compte les cas malins et bénins), `/api/split` (appelle `split_dataset`), `/api/train`, `/api/status`, `/api/stop`, `/api/predict`.
+- `webui/trainer.py` entraîne dans un **thread en arrière-plan**, une epoch à la fois avec le même `Network.fit`, et gère l'early stopping et la sauvegarde finale comme `training.py`. Après chaque epoch, il garde les métriques et une copie des poids.
+- La page interroge `/api/status` toutes les 250 ms pour mettre à jour les courbes et le dessin du réseau. Les poids affichés sont donc les vrais poids de l'epoch en cours.
+
+**Comment l'utiliser**
+
+1. **Setup** : saisir le chemin du jeu de données (le `data.csv` complet, par défaut `datasets/data.csv`, et non `data_train.csv`), cliquer sur *Load data*, choisir avec la barre coulissante combien d'échantillons vont à l'entraînement (le reste va au test), puis cliquer sur *Split data*. Ça crée `datasets/data_train.csv` et `datasets/data_predict.csv` et écrase les fichiers existants. Cliquer sur *Open workspace* pour continuer.
+2. Onglet **Train** : régler les couches cachées (au moins 2), l'activation, l'optimiseur, la loss, le learning rate (vide = valeur par défaut de l'optimiseur), les epochs, la taille de batch et la patience, puis cliquer sur *Train model*. L'équivalent en ligne de commande des réglages choisis est affiché sous les contrôles. *Stop* interrompt l'entraînement et garde le modèle atteint à ce moment-là.
+3. Dans le dessin du réseau, cliquer sur un neurone pour voir son biais et les poids de ses liens. L'épaisseur d'un lien est la valeur absolue de son poids, sa couleur est le signe (positif ou négatif).
+4. Onglet **Predict** : verrouillé tant qu'aucun modèle n'a été entraîné pendant la session. Choisir un jeu de données étiqueté et lancer la prédiction : on obtient les mêmes métriques que `predict.py`, plus le tableau des prédictions (avec une option pour n'afficher que les erreurs).
+
+Remarque : l'interface démarre avec Adam comme optimiseur, alors que la ligne de commande utilise SGD par défaut. Les deux se changent aux deux endroits.
 
 ---
 
@@ -357,7 +408,7 @@ C'est aussi, pour la classification, une meilleure fonction de coût que l'erreu
 
 ### Lien avec la cross-entropy catégorielle
 
-Pour deux classes, la cross-entropy catégorielle $-\sum_i y_i \ln \hat p_i$ est **identique** à la cross-entropy binaire, car $y_M = 1 - y_B$ et $\hat p_M = 1 - \hat p_B$. C'est pour cela que la loss affichée (binaire) et le gradient utilisé (section 9, écrit pour la softmax) sont cohérents.
+Pour deux classes, la cross-entropy catégorielle $-\sum_i y_i \ln \hat p_i$ est **identique** à la cross-entropy binaire, car $y_M = 1 - y_B$ et $\hat p_M = 1 - \hat p_B$. C'est pour cela que la loss affichée (binaire) et le gradient utilisé (section 9, écrit pour la softmax) sont cohérents. C'est aussi pour cela que l'option `--loss` accepte `categoricalCrossentropy` comme `binaryCrossentropy` : avec deux sorties softmax, le calcul est le même.
 
 ---
 
