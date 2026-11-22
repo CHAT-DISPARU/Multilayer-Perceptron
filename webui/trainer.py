@@ -19,12 +19,6 @@
 # | END HEADER                         |
 # +------------------------------------+
 
-"""Entraînement en arrière-plan pour l'interface web.
-
-Aucun fichier du projet n'est modifié : on appelle le vrai Network.fit
-une époque à la fois (l'optimiseur garde son état entre deux appels),
-ce qui permet de publier les poids et les courbes après chaque époque.
-"""
 import io
 import json
 import threading
@@ -51,7 +45,6 @@ _state = {"status": "idle"}
 
 
 def _log(line):
-	"""une ligne pour la page ET pour le vrai terminal (comme training.py)"""
 	with _lock:
 		_state["log"].append(line)
 	try:
@@ -68,7 +61,7 @@ def _epoch_line(ep, total, h):
 
 
 def _save_history(path, cfg, history, best_epoch):
-	"""même format que save_history() de training.py"""
+	"""save_history() training.py"""
 	data = {
 		"optimizer": cfg["opt"], "activation": cfg["act"], "learning_rate": cfg["lr"],
 		"layers": cfg["layers"], "batch_size": cfg["batch"], "epochs_requested": cfg["epochs"],
@@ -107,7 +100,7 @@ def _check(cfg):
 
 
 def start(payload):
-	"""valide, charge les données (erreurs renvoyées tout de suite), lance le thread"""
+	"""valide charge les données  lance le thread"""
 	global _thread
 	with _lock:
 		if _state.get("status") == "running":
