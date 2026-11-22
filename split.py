@@ -24,45 +24,8 @@
 
 import sys
 import os
+from mlp.columns import INFO
 from mlp.csv_reader import load_csv
-
-INFO = [
-	"ID",
-	"Diagnosis",
-
-	"Radius_mean",
-	"Texture_mean",
-	"Perimeter_mean",
-	"Area_mean",
-	"Smoothness_mean",
-	"Compactness_mean",
-	"Concavity_mean",
-	"Concave_points_mean",
-	"Symmetry_mean",
-	"Fractal_dimension_mean",
-
-	"Radius_se",
-	"Texture_se",
-	"Perimeter_se",
-	"Area_se",
-	"Smoothness_se",
-	"Compactness_se",
-	"Concavity_se",
-	"Concave_points_se",
-	"Symmetry_se",
-	"Fractal_dimension_se",
-
-	"Radius_worst",
-	"Texture_worst",
-	"Perimeter_worst",
-	"Area_worst",
-	"Smoothness_worst",
-	"Compactness_worst",
-	"Concavity_worst",
-	"Concave_points_worst",
-	"Symmetry_worst",
-	"Fractal_dimension_worst"
-]
 
 import csv
 import random
@@ -96,7 +59,7 @@ def main():
 	h = "--help" in sys.argv[1:]
 	r = "--rand" in sys.argv[1:]
 	if h:
-		print("""Usage: python3 describe.py <data.csv> [--help]
+		print("""Usage: python3 split.py <data.csv> <ratio> [--help] [--rand]
 
 Attribute information
 
@@ -129,7 +92,7 @@ All feature values are recoded with four significant digits.
 		sys.exit(0)
 
 	if len(args) != 2:
-		print("Usage: python3 describe.py <data.csv> [--help] [--rand] ratio", file=sys.stderr)
+		print("Usage: python3 split.py <data.csv> <ratio> [--help] [--rand]", file=sys.stderr)
 		sys.exit(1)
 
 	try:

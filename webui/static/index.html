@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MLP Studio</title>
+<script>
+(function () {
+	var t;
+	try { t = localStorage.getItem("theme"); } catch (e) {}
+	if (!t) t = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+	document.documentElement.dataset.theme = t;
+})();
+</script>
+<style>
+:root{--glass:#f3f1f8;--ink:#1d1a2e;--mut:#6c6783;--line:#dad6e8;--hema:#4b3a8f;--eos:#ee8fb0;--ok:#1f9d7a;--bad:#d13b5e;--card:#fff;--on-ink:#fff}
+[data-theme=dark]{color-scheme:dark;--glass:#13101f;--card:#1c1830;--ink:#ece9f7;--mut:#9f99b8;--line:#322d4b;--hema:#8f7cf0;--eos:#f29bbb;--ok:#3ccf9f;--bad:#ff6f8f;--on-ink:#13101f}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--glass);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:focus-visible{outline:2px solid var(--hema);outline-offset:3px}
+.app{max-width:1040px;margin:0 auto;padding:28px 24px 72px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:48px}
+.brand{display:flex;gap:10px;align-items:center;font-weight:700;font-size:19px;letter-spacing:-.02em}
+.brand i{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,var(--hema) 0 32%,var(--eos) 35%)}
+.where{color:var(--mut);font-size:14px}
+.tools{display:flex;align-items:center;gap:16px}
+.tgl{background:none;border:1px solid var(--line);color:var(--ink);width:36px;height:36px;border-radius:50%;display:grid;place-items:center;cursor:pointer;transition:border-color .2s}
+.tgl:hover{border-color:var(--ink)}
+[data-theme=dark] .moon,:root:not([data-theme=dark]) .sun{display:none}
+h1{font-size:clamp(30px,5vw,50px);line-height:1.04;letter-spacing:-.035em;font-weight:760;margin:0 0 14px;max-width:15ch}
+.lead{color:var(--mut);max-width:52ch;margin:0 0 30px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input[type=text]{flex:1;min-width:240px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:15px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+input[type=text]:focus{border-color:var(--hema)}
+.btn{border:0;border-radius:10px;padding:12px 22px;font:inherit;font-weight:600;color:var(--on-ink);background:var(--ink);cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--hema)}
+.btn:disabled{opacity:.55;cursor:progress}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--card);border-color:var(--ink)}
+.err{color:var(--bad);font-size:14px;min-height:1.5em;margin:8px 0 0}
+.err.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+.field{display:flex;flex-wrap:wrap;gap:6px;margin:38px 0 34px;padding:22px;background:var(--card);border:1px solid var(--line);border-radius:18px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--hema);transition:background .25s,transform .25s;animation:pop .45s backwards;animation-delay:calc(var(--i) * 1.6ms)}
+.dot.e{background:var(--eos);transform:scale(.8)}
+@keyframes pop{from{transform:scale(0);opacity:0}}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end}
+.nums{display:flex;gap:44px}
+.nums b{display:block;font-size:clamp(40px,6vw,64px);line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.nums span{color:var(--mut);font-size:14px;display:flex;align-items:center;gap:7px;margin-top:6px}
+.nums span::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--hema)}
+.nums div:last-child span::before{background:var(--eos)}
+label{font-size:14px;color:var(--mut)}
+.ctl output{color:var(--ink);font-weight:700;margin-left:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:99px;margin:14px 0 18px;cursor:pointer;background:linear-gradient(90deg,var(--hema) var(--p,60%),var(--eos) var(--p,60%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--card);border:3px solid var(--ink);box-shadow:0 2px 8px rgba(29,26,46,.25)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--card);border:3px solid var(--ink)}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+.chk input{accent-color:var(--hema);width:16px;height:16px}
+
+.bal{margin:34px 0 0;max-width:520px}
+.bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}
+.bar i{display:block;height:100%;width:0;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.bar i:first-child{background:var(--bad)}
+.bar i:last-child{background:var(--ok)}
+.bal p{margin:8px 0 0;color:var(--mut);font-size:14px}
+.actions{display:flex;gap:12px;align-items:center;margin-top:34px;flex-wrap:wrap}
+.done{color:var(--ok);font-size:14px;margin:14px 0 0}
+
+.tabs{display:flex;gap:28px;border-bottom:1px solid var(--line);margin-bottom:32px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 2px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer;display:flex;gap:7px;align-items:center;margin-bottom:-1px}
+.tab.on{color:var(--ink);border-color:var(--hema)}
+.tab:disabled{cursor:not-allowed;opacity:.6}
+.empty{border:2px dashed var(--line);border-radius:18px;padding:56px 28px;text-align:center;color:var(--mut)}
+.empty b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.wsbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;color:var(--mut);font-size:14px;flex-wrap:wrap;gap:10px}
+.builder{display:grid;grid-template-columns:340px 1fr;gap:44px;align-items:start}
+.ctrls h2{font-size:14px;font-weight:650;color:var(--mut);margin:24px 0 8px}
+.ctrls h2:first-child{margin-top:0}
+.lrow{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.lrow span{width:64px;font-size:14px;color:var(--mut)}
+.lrow button{width:34px;height:38px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
+.lrow button:hover:not(:disabled){border-color:var(--ink)}
+.lrow button:disabled{opacity:.35;cursor:not-allowed}
+.lrow .num{text-align:center;padding:9px 4px}
+.num{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;color:var(--ink)}
+.num:focus{border-color:var(--hema)}
+.btn.small{padding:8px 16px;font-size:14px;margin-top:4px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;padding:9px 6px;color:var(--mut);font:inherit;font-size:14px;cursor:pointer;transition:background .2s,color .2s}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:var(--on-ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+.grid2 label{display:block}
+.grid2 .num{margin-top:5px}
+.viz svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:18px}
+.viz svg text{fill:var(--mut);font-size:12px;text-anchor:middle}
+.lk{stroke:var(--line);stroke-width:1}
+.nd{transform-box:fill-box;transform-origin:center;animation:pop .35s backwards}
+.n-in{fill:var(--hema)}
+.n-h{fill:var(--card);stroke:var(--hema);stroke-width:2.5}
+.n-m{fill:var(--bad)}
+.n-b{fill:var(--ok)}
+.meta{color:var(--mut);font-size:14px;margin:14px 0 10px}
+.cmd{margin:0;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+@media(max-width:860px){.builder{grid-template-columns:1fr}}
+@media(max-width:720px){.split{grid-template-columns:1fr;gap:28px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Training + Predict ---------- */
+.runbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.runbar .btn{white-space:nowrap}
+.prog{flex:1;min-width:180px}
+.prog .bar{height:6px}
+#pbar{background:var(--hema);transition:width .25s linear}
+.prog span{display:block;font-size:13px;color:var(--mut);margin-top:6px;font-variant-numeric:tabular-nums}
+.tab svg{flex:none}
+.ctrls:has(:disabled) .seg button{cursor:not-allowed}
+
+.nd{animation:none;cursor:pointer}
+.nd.anim{animation:pop .35s backwards}
+.nd.sel{stroke:var(--ink);stroke-width:3}
+.lk{stroke-linecap:round}
+.lk.pos{stroke:var(--ok)}
+.lk.neg{stroke:var(--bad)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:10px 0 0}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.legend .g{border-color:var(--ok)}
+.legend .r{border-color:var(--bad)}
+.legend .tr{border-color:var(--hema)}
+.legend .va{border-top-style:dashed;border-color:var(--eos)}
+
+.info{margin-top:14px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:14px;min-height:60px}
+.info h3{margin:0 0 8px;font-size:15px;letter-spacing:-.01em}
+.hint{color:var(--mut);font-size:14px;margin:0}
+.kv{display:flex;justify-content:space-between;margin:3px 0;font-size:14px;color:var(--mut)}
+.kv b{color:var(--ink)}
+.up{color:var(--ok)!important}
+.dn{color:var(--bad)!important}
+.wl{display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;margin-top:10px}
+.wl h4{margin:6px 0 6px;font-size:12px;font-weight:650;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.wr{display:grid;grid-template-columns:1fr 64px 58px;gap:8px;align-items:center;font-size:13px;color:var(--mut);margin-bottom:5px}
+.wr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr i{display:block;height:6px;border-radius:99px}
+.wr i.up{background:var(--ok)}
+.wr i.dn{background:var(--bad)}
+.wr b{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.more{font-size:12px;color:var(--mut);margin:2px 0 0}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:12px;margin-top:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card b{display:block;font-size:24px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.card span{font-size:13px;color:var(--mut)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.charts figure{margin:0}
+.charts svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.charts figcaption{font-size:13px;color:var(--mut);margin-top:6px}
+.charts svg text.y{text-anchor:end}
+.charts svg text.x{text-anchor:middle}
+.ax{stroke:var(--line);stroke-width:1}
+.ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ln.tr{stroke:var(--hema)}
+.ln.va{stroke:var(--eos);stroke-dasharray:5 4}
+.console{max-height:230px;overflow:auto;margin-top:18px;font-size:12px;white-space:pre}
+.cmd.console{white-space:pre}
+
+#predict-panel .row{margin-top:4px}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;max-width:440px;margin:22px 0 6px}
+.cm div{padding:14px 12px;border-radius:10px;text-align:center;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:13px}
+.cm b{display:block;font-size:26px;color:var(--ink);font-variant-numeric:tabular-nums}
+.cm .h{border:0;background:none;padding:6px 8px;display:flex;align-items:center;justify-content:center}
+.cm .ok{background:color-mix(in srgb,var(--ok) 16%,var(--card))}
+.cm .bad{background:color-mix(in srgb,var(--bad) 16%,var(--card))}
+.tbar{display:flex;justify-content:space-between;align-items:center;margin:26px 0 10px;flex-wrap:wrap;gap:8px}
+.tblwrap{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th{position:sticky;top:0;background:var(--card);color:var(--mut);font-weight:600}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .pb{display:inline-block;width:70px;height:6px;border-radius:99px;background:var(--line);vertical-align:middle;margin-right:8px;overflow:hidden}
+.tbl .pb i{display:block;height:100%;background:var(--bad)}
+.tbl .mk{font-weight:700}
+
+@media(max-width:720px){.charts,.wl{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+	<div class="top">
+		<div class="brand"><i></i>MLP Studio</div>
+		<div class="tools">
+			<span class="where" id="where">Setup</span>
+			<button class="tgl" id="theme" aria-label="Switch between light and dark theme" title="Switch theme">
+				<svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+				<svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+			</button>
+		</div>
+	</div>
+
+	<main id="setup">
+		<h1>Choose the data your model learns from</h1>
+		<p class="lead">Point to the dataset, then decide how many samples train the network and how many are kept aside to test it.</p>
+		<div class="row">
+			<input type="text" id="path" value="datasets/data.csv" spellcheck="false" aria-label="Path to the dataset CSV">
+			<button class="btn" id="load">Load data</button>
+		</div>
+		<p class="err" id="err1"></p>
+
+		<section id="lab" hidden>
+			<div class="field" id="field" aria-label="One dot per sample"></div>
+			<div class="split">
+				<div class="nums">
+					<div><b id="n-train">0</b><span>train samples</span></div>
+					<div><b id="n-test">0</b><span>test samples</span></div>
+				</div>
+				<div class="ctl">
+					<label for="ratio">Share used for training<output id="pct">80%</output></label>
+					<input type="range" id="ratio" min="1" max="2" value="1" aria-label="Number of training samples">
+					<label class="chk"><input type="checkbox" id="rand"> Shuffle differently every time</label>
+				</div>
+			</div>
+			<div class="bal">
+				<div class="bar"><i id="bal-m"></i><i id="bal-b"></i></div>
+				<p id="bal-txt"></p>
+			</div>
+			<div class="actions">
+				<button class="btn" id="split">Split data</button>
+				<button class="btn ghost" id="open" hidden>Open workspace</button>
+			</div>
+			<p class="err" id="err2"></p>
+			<p class="done" id="done" hidden></p>
+		</section>
+	</main>
+
+	<main id="work" hidden>
+		<div class="wsbar"><span id="chip"></span><button class="btn ghost" id="back">Change data</button></div>
+		<nav class="tabs">
+			<button class="tab on" data-t="train">Train</button>
+			<button class="tab" data-t="predict" id="tab-pred" disabled title="Train a model first">
+				<svg id="lock" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="10" height="7" rx="2"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>Predict
+			</button>
+		</nav>
+		<div class="builder" id="train-panel">
+			<div class="ctrls">
+				<h2>Hidden layers</h2>
+				<div id="layers"></div>
+				<button class="btn ghost small" id="add-layer">Add a layer</button>
+				<h2>Activation</h2>
+				<div class="seg" data-k="act"><button data-v="relu">ReLU</button><button data-v="sigmoid">Sigmoid</button><button data-v="tanh">Tanh</button></div>
+				<h2>Optimizer</h2>
+				<div class="seg" data-k="opt"><button data-v="adam">Adam</button><button data-v="sgd">SGD</button></div>
+				<h2>Loss</h2>
+				<div class="seg" data-k="loss"><button data-v="categoricalCrossentropy">Categorical</button><button data-v="binaryCrossentropy">Binary</button></div>
+				<div class="grid2">
+					<label>Learning rate<input class="num" type="number" step="any" min="0" placeholder="auto" data-k="lr"></label>
+					<label>Epochs<input class="num" type="number" min="1" value="70" data-k="epochs"></label>
+					<label>Batch size<input class="num" type="number" min="1" value="16" data-k="batch"></label>
+					<label>Patience (0 = off)<input class="num" type="number" min="0" value="0" data-k="patience"></label>
+				</div>
+			</div>
+			<div class="viz">
+				<div class="runbar">
+					<button class="btn" id="train">Train model</button>
+					<button class="btn ghost" id="stop" hidden>Stop</button>
+					<button class="btn ghost" id="go-pred" hidden>Go to Predict</button>
+					<div class="prog"><div class="bar"><i id="pbar" style="width:0"></i></div><span id="ptxt">Ready to train</span></div>
+				</div>
+				<p class="err" id="t-err"></p>
+				<svg id="net" viewBox="0 0 700 380" role="img" aria-label="Network diagram. Click a neuron to inspect it."></svg>
+				<p class="meta" id="meta"></p>
+				<p class="legend" id="key" hidden><span><i class="g"></i>positive weight</span><span><i class="r"></i>negative weight</span><span>thicker = stronger. Hidden neurons take the color of their bias.</span></p>
+				<div class="info" id="info"></div>
+				<div class="cards" id="cards" hidden></div>
+				<div class="charts" id="charts" hidden>
+					<figure><svg id="ch-loss" viewBox="0 0 340 190" role="img" aria-label="Loss per epoch"></svg><figcaption>Loss</figcaption></figure>
+					<figure><svg id="ch-acc" viewBox="0 0 340 190" role="img" aria-label="Accuracy per epoch"></svg><figcaption>Accuracy</figcaption></figure>
+				</div>
+				<p class="legend" id="clegend"><span><i class="tr"></i>train</span><span><i class="va"></i>validation</span></p>
+				<pre class="cmd console" id="console" hidden></pre>
+				<pre class="cmd" id="cmd"></pre>
+			</div>
+		</div>
+		<div id="predict-panel" hidden>
+			<p class="meta" id="p-model" style="margin-top:0"></p>
+			<div class="row">
+				<input type="text" id="pdset" value="datasets/data_predict.csv" spellcheck="false" aria-label="Path to the dataset to predict">
+				<button class="btn" id="run-pred">Run prediction</button>
+			</div>
+			<p class="err" id="p-err"></p>
+			<div id="p-out" hidden>
+				<div class="cards" id="p-cards"></div>
+				<div class="cm" id="p-cm"></div>
+				<pre class="cmd console" id="p-term"></pre>
+				<div class="tbar">
+					<span class="meta" id="tcount" style="margin:0"></span>
+					<label class="chk"><input type="checkbox" id="only-err"> Show errors only</label>
+				</div>
+				<div class="tblwrap"><table class="tbl"><thead><tr><th>ID</th><th>True</th><th>Predicted</th><th>P(M)</th><th>P(B)</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+			</div>
+			<pre class="cmd" id="p-cmd" style="margin-top:18px"></pre>
+		</div>
+	</main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let total = 0;
+
+async function api(route, body) {
+	const r = await fetch(route, { method: "POST", body: JSON.stringify(body) });
+	const j = await r.json();
+	if (!r.ok || j.error) throw new Error(j.error || "Request failed");
+	return j;
+}
+
+function fail(id, msg) {
+	const e = $(id);
+	e.textContent = msg;
+	e.classList.remove("shake");
+	void e.offsetWidth;
+	e.classList.add("shake");
+}
+
+function countUp(el, to) {
+	const t0 = performance.now();
+	const tick = t => {
+		const k = Math.min(1, (t - t0) / 700);
+		el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+		if (k < 1) requestAnimationFrame(tick);
+	};
+	requestAnimationFrame(tick);
+}
+
+function buildDots(n) {
+	const f = $("#field");
+	f.innerHTML = "";
+	for (let i = 0; i < n; i++) {
+		const d = document.createElement("span");
+		d.className = "dot";
+		d.style.setProperty("--i", i);
+		f.appendChild(d);
+	}
+}
+
+function update(animate) {
+	const r = $("#ratio");
+	const tr = +r.value;                           // le curseur vaut directement le nombre d'échantillons de train
+	const lo = +r.min, hi = +r.max;
+	r.style.setProperty("--p", (hi > lo ? (tr - lo) / (hi - lo) * 100 : 100) + "%");
+	$("#pct").textContent = Math.round(1000 * tr / total) / 10 + "%";
+	if (animate) { countUp($("#n-train"), tr); countUp($("#n-test"), total - tr); }
+	else { $("#n-train").textContent = tr; $("#n-test").textContent = total - tr; }
+	$("#field").childNodes.forEach((d, i) => d.classList.toggle("e", i >= tr));
+}
+
+async function load(silent) {
+	const b = $("#load");
+	b.disabled = true;
+	$("#err1").textContent = "";
+	try {
+		const d = await api("/api/inspect", { path: $("#path").value });
+		if (d.total < 2) throw new Error("The dataset needs at least 2 samples to be split");
+		const r = $("#ratio");
+		const keep = d.total === total ? +r.value : 0;   // même base rechargée : on garde le réglage
+		total = d.total;
+		r.min = 1;
+		r.max = total - 1;                               // au moins 1 échantillon de test
+		r.value = keep || Math.floor(total * 0.8);
+		buildDots(total);
+		$("#lab").hidden = false;
+		$("#done").hidden = true;
+		$("#open").hidden = true;
+		update(true);
+		const pm = Math.round(100 * d.malignant / d.total);
+		requestAnimationFrame(() => {
+			$("#bal-m").style.width = (100 * d.malignant / d.total) + "%";
+			$("#bal-b").style.width = (100 * d.benign / d.total) + "%";
+		});
+		$("#bal-txt").textContent = `${d.malignant} malignant (${pm}%) and ${d.benign} benign (${100 - pm}%) cases`;
+	} catch (e) {
+		$("#lab").hidden = true;
+		if (!silent) fail("#err1", e.message);
+	}
+	b.disabled = false;
+}
+
+async function doSplit() {
+	const b = $("#split");
+	b.disabled = true;
+	$("#err2").textContent = "";
+	try {
+		const d = await api("/api/split", {
+			path: $("#path").value,
+			ratio: (+$("#ratio").value + 0.5) / total,   // int(total * ratio) retombe exactement sur N, sans erreur d'arrondi
+			rand: $("#rand").checked
+		});
+		$("#done").hidden = false;
+		$("#done").textContent = `Saved ${d.train_file} (${d.train} samples) and ${d.test_file} (${d.test} samples)`;
+		$("#chip").textContent = `${d.train} train samples, ${d.test} test samples`;
+		$("#open").hidden = false;
+	} catch (e) {
+		fail("#err2", e.message);
+	}
+	b.disabled = false;
+}
+
+function show(view) {
+	$("#setup").hidden = view !== "setup";
+	$("#work").hidden = view !== "work";
+	$("#where").textContent = view === "setup" ? "Setup" : "Workspace";
+}
+
+$("#theme").onclick = () => {
+	const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+	document.documentElement.dataset.theme = t;
+	try { localStorage.setItem("theme", t); } catch (e) {}
+};
+$("#load").onclick = () => load(false);
+$("#path").addEventListener("keydown", e => { if (e.key === "Enter") load(false); });
+$("#ratio").addEventListener("input", () => { update(false); $("#open").hidden = true; $("#done").hidden = true; });
+$("#split").onclick = doSplit;
+$("#open").onclick = () => show("work");
+$("#back").onclick = () => show("setup");
+/* ---------- Model builder ---------- */
+const BASE = ["Radius", "Texture", "Perimeter", "Area", "Smoothness", "Compactness", "Concavity", "Concave points", "Symmetry", "Fractal dimension"];
+const FEATURES = ["mean", "se", "worst"].flatMap(s => BASE.map(b => `${b} ${s}`));   // même ordre que columns.py
+const cfg = { layers: [24, 24], act: "relu", opt: "adam", loss: "categoricalCrossentropy", lr: "", epochs: 70, batch: 16, patience: 0 };
+const NIN = 30, MAXN = 12, MAXL = 8;
+const clampN = v => Math.max(1, Math.min(256, Math.round(+v) || 1));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(3);
+
+let run = { W: null, epochs: 0 };   // W : poids du dernier statut reçu (null = réseau sans poids affichés)
+let sel = null;                     // neurone sélectionné {k: colonne, j: index}
+let trained = null;                 // {label, file} dès qu'un modèle existe
+let predRows = [];
+
+function renderLayers() {
+	$("#layers").innerHTML = cfg.layers.map((n, i) => `
+		<div class="lrow"><span>Layer ${i + 1}</span>
+			<button data-d="-1" data-i="${i}" aria-label="Fewer neurons in layer ${i + 1}">−</button>
+			<input class="num" type="number" min="1" max="256" value="${n}" data-i="${i}" aria-label="Neurons in layer ${i + 1}">
+			<button data-d="1" data-i="${i}" aria-label="More neurons in layer ${i + 1}">+</button>
+			<button data-x="${i}" aria-label="Remove layer ${i + 1}" ${cfg.layers.length <= 2 ? "disabled" : ""}>×</button>
+		</div>`).join("");
+	$("#add-layer").disabled = cfg.layers.length >= MAXL;
+}
+
+function paintSeg() {
+	document.querySelectorAll(".seg").forEach(s =>
+		s.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === cfg[s.dataset.k])));
+}
+
+function cols() {
+	const c = [{ n: NIN, t: "Input", s: "30 features", k: "n-in" }]
+		.concat(cfg.layers.map((n, i) => ({ n, t: `Hidden ${i + 1}`, s: `${n} neurons`, k: "n-h" })))
+		.concat([{ n: 2, t: "Output", s: "softmax", k: "n-out" }]);
+	const W = 700, mid = 165, step = (W - 130) / (c.length - 1);
+	c.forEach((col, k) => {
+		col.x = 65 + k * step;
+		col.shown = Math.min(col.n, MAXN);
+		const gap = Math.min(28, 270 / Math.max(1, col.shown - 1));
+		col.ys = Array.from({ length: col.shown }, (_, j) => mid + (j - (col.shown - 1) / 2) * gap);
+	});
+	return c;
+}
+
+function draw(animate) {
+	const H = 380, c = cols(), W = run.W;
+	let mx = 0, bm = 0;                                  // plus grand |poids| et |biais| affichés
+	if (W) {
+		for (let k = 0; k < c.length - 1; k++)
+			for (let j = 0; j < c[k + 1].shown; j++) {
+				bm = Math.max(bm, Math.abs(W[k].b[j]));
+				for (let i = 0; i < c[k].shown; i++) mx = Math.max(mx, Math.abs(W[k].W[j][i]));
+			}
+	}
+	let svg = "";
+	for (let k = 0; k < c.length - 1; k++)
+		for (let j = 0; j < c[k + 1].shown; j++)
+			for (let i = 0; i < c[k].shown; i++) {
+				let cls = "lk", st = "";
+				if (W) {
+					const w = W[k].W[j][i], a = mx ? Math.abs(w) / mx : 0;
+					const on = sel && ((sel.k === k && sel.j === i) || (sel.k === k + 1 && sel.j === j));
+					cls += w >= 0 ? " pos" : " neg";                // vert = positif, rouge = négatif
+					st = ` style="stroke-width:${(0.5 + 3.5 * a + (on ? 1 : 0)).toFixed(2)};opacity:${(on ? 1 : sel ? 0.06 : 0.2 + 0.8 * a).toFixed(2)}"`;
+				}
+				svg += `<line class="${cls}"${st} x1="${c[k].x}" y1="${c[k].ys[i]}" x2="${c[k + 1].x}" y2="${c[k + 1].ys[j]}"/>`;
+			}
+	c.forEach((col, k) => {
+		col.ys.forEach((y, j) => {
+			const cls = col.k === "n-out" ? (j === 0 ? "n-m" : "n-b") : col.k;
+			let st = "";
+			if (W && col.k === "n-h") {                          // la couleur du neurone suit son biais
+				const b = W[k - 1].b[j], p = bm ? Math.round(15 + 70 * Math.abs(b) / bm) : 0;
+				st = ` style="fill:color-mix(in srgb,var(${b >= 0 ? "--ok" : "--bad"}) ${p}%,var(--card))"`;
+			}
+			const on = sel && sel.k === k && sel.j === j;
+			svg += `<circle class="nd ${cls}${animate ? " anim" : ""}${on ? " sel" : ""}"${st} data-k="${k}" data-j="${j}" cx="${col.x}" cy="${y}" r="${on ? 9 : 7.5}"/>`;
+			if (col.k === "n-out") svg += `<text x="${col.x + 20}" y="${y + 4}">${j === 0 ? "M" : "B"}</text>`;
+		});
+		if (col.n > MAXN) svg += `<text x="${col.x}" y="20">+${col.n - MAXN} more</text>`;
+		svg += `<text x="${col.x}" y="${H - 38}" style="fill:var(--ink);font-weight:600">${col.t}</text>`;
+		svg += `<text x="${col.x}" y="${H - 20}">${col.s}</text>`;
+	});
+	$("#net").innerHTML = svg;
+}
+
+function meta() {
+	const sizes = [NIN, ...cfg.layers, 2];
+	let params = 0;
+	for (let i = 1; i < sizes.length; i++) params += sizes[i - 1] * sizes[i] + sizes[i];
+	$("#meta").textContent = `${cfg.layers.length} hidden layers, ${params} trainable parameters. Showing at most ${MAXN} neurons per layer.`;
+	$("#key").hidden = !run.W;
+}
+
+function wlist(title, pairs) {
+	const m = Math.max(...pairs.map(p => Math.abs(p[1])), 1e-12);
+	const top = pairs.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8);
+	return `<div><h4>${title}</h4>${top.map(([n, w]) =>
+		`<div class="wr"><span title="${esc(n)}">${esc(n)}</span><i class="${w >= 0 ? "up" : "dn"}" style="width:${(100 * Math.abs(w) / m).toFixed(0)}%"></i><b>${fmt(w)}</b></div>`).join("")}
+		${pairs.length > 8 ? `<p class="more">Top 8 of ${pairs.length}</p>` : ""}</div>`;
+}
+
+function info() {
+	const el = $("#info");
+	if (!sel) { el.innerHTML = `<p class="hint">Click a neuron to see its bias and the weights of its links.</p>`; return; }
+	const L = cfg.layers.length, k = sel.k, j = sel.j;
+	const title = k === 0 ? `Input: ${FEATURES[j]}` : k === L + 1 ? `Output: ${j === 0 ? "Malignant" : "Benign"}` : `Hidden ${k}, neuron ${j + 1}`;
+	let html = `<h3>${esc(title)}</h3>`;
+	const W = run.W;
+	if (!W) { el.innerHTML = html + `<p class="hint">Train the model to see its weights and bias.</p>`; return; }
+	if (k > 0) {
+		const ly = W[k - 1];
+		html += `<p class="kv"><span>Bias</span><b class="${ly.b[j] >= 0 ? "up" : "dn"}">${fmt(ly.b[j])}</b></p>`;
+		html += `<p class="kv"><span>Activation</span><b>${ly.act}</b></p>`;
+	}
+	let inc = "", out = "";
+	if (k > 0) inc = wlist("Incoming weights", W[k - 1].W[j].map((w, i) => [k === 1 ? FEATURES[i] : `Hidden ${k - 1}, ${i + 1}`, w]));
+	if (k < L + 1) out = wlist("Outgoing weights", W[k].W.map((row, t) => [k + 1 === L + 1 ? (t === 0 ? "Malignant" : "Benign") : `Hidden ${k + 1}, ${t + 1}`, row[j]]));
+	el.innerHTML = html + `<div class="wl">${inc}${out}</div>`;
+}
+
+function cmd() {
+	const a = ["python training.py", "--train datasets/data_train.csv", "--val datasets/data_predict.csv",
+		`--layer ${cfg.layers.join(" ")}`, `--activation ${cfg.act}`, `--optimizer ${cfg.opt}`, `--loss ${cfg.loss}`];
+	if (cfg.lr !== "") a.push(`--lr ${cfg.lr}`);
+	a.push(`--epochs ${cfg.epochs}`, `--batch_size ${cfg.batch}`);
+	if (+cfg.patience > 0) a.push(`--patience ${cfg.patience}`);
+	$("#cmd").textContent = a.join(" \\\n  ");
+}
+
+function refresh() { run.W = null; sel = null; draw(true); info(); meta(); cmd(); }   // l'architecture a changé
+
+$("#layers").addEventListener("click", e => {
+	const b = e.target.closest("button");
+	if (!b || b.disabled) return;
+	if (b.dataset.d) { const i = +b.dataset.i; cfg.layers[i] = clampN(cfg.layers[i] + +b.dataset.d); }
+	else if (b.dataset.x) cfg.layers.splice(+b.dataset.x, 1);
+	renderLayers(); refresh();
+});
+$("#layers").addEventListener("input", e => {
+	if (e.target.dataset.i === undefined) return;
+	cfg.layers[+e.target.dataset.i] = clampN(e.target.value);
+	refresh();
+});
+$("#layers").addEventListener("change", renderLayers);
+$("#add-layer").onclick = () => {
+	if (cfg.layers.length < MAXL) cfg.layers.push(cfg.layers[cfg.layers.length - 1]);
+	renderLayers(); refresh();
+};
+document.querySelectorAll(".seg").forEach(s => s.addEventListener("click", e => {
+	const b = e.target.closest("button");
+	if (!b || b.disabled) return;
+	cfg[s.dataset.k] = b.dataset.v;
+	paintSeg(); cmd();
+}));
+document.querySelectorAll("input[data-k]").forEach(i => i.addEventListener("input", () => { cfg[i.dataset.k] = i.value; cmd(); }));
+
+$("#net").addEventListener("click", e => {
+	const n = e.target.closest("circle[data-k]");
+	sel = n ? { k: +n.dataset.k, j: +n.dataset.j } : null;
+	draw(false); info();
+});
+
+/* ---------- Live training ---------- */
+function setRunning(on) {
+	document.querySelectorAll(".ctrls input, .ctrls button").forEach(x => x.disabled = on);
+	if (!on) renderLayers();
+	$("#train").disabled = on;
+	$("#stop").hidden = !on;
+	$("#go-pred").hidden = on || !trained;
+}
+
+async function startTraining() {
+	$("#t-err").textContent = "";
+	try {
+		await api("/api/train", {
+			layers: cfg.layers, act: cfg.act, opt: cfg.opt, loss: cfg.loss,
+			lr: cfg.lr, epochs: cfg.epochs, batch: cfg.batch, patience: cfg.patience
+		});
+	} catch (e) { fail("#t-err", e.message); return; }
+	sel = null;
+	$("#cards").hidden = $("#charts").hidden = true;
+	$("#pbar").style.width = "0%";
+	$("#ptxt").textContent = "Starting…";
+	setRunning(true);
+	poll();
+}
+
+async function poll() {
+	let s;
+	try { s = await api("/api/status", {}); }
+	catch (e) { fail("#t-err", e.message); setRunning(false); return; }
+	apply(s);
+	if (s.status === "running") setTimeout(poll, 250);
+	else finish(s);
+}
+
+function chart(id, a, b, pct) {
+	const W = 340, H = 190, L = 42, R = 10, T = 10, B = 24;
+	const n = Math.max(run.epochs, 2), all = a.concat(b);
+	if (!all.length) { $(id).innerHTML = ""; return; }
+	let lo = Math.min(...all), hi = Math.max(...all);
+	if (hi - lo < 1e-6) { lo -= 0.05; hi += 0.05; }
+	const pad = (hi - lo) * 0.08;
+	lo -= pad; hi += pad;
+	if (pct) hi = Math.min(hi, 1.02);
+	const X = e => L + (e - 1) / (n - 1) * (W - L - R);
+	const Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+	let g = "";
+	for (let k = 0; k < 4; k++) {
+		const v = lo + (hi - lo) * k / 3, y = Y(v).toFixed(1);
+		g += `<line class="ax" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="y" x="${L - 6}" y="${+y + 4}">${v.toFixed(2)}</text>`;
+	}
+	g += `<text class="x" x="${L}" y="${H - 6}">1</text><text class="x" x="${W - R}" y="${H - 6}">${n}</text>`;
+	const path = v => v.map((y, i) => `${i ? "L" : "M"}${X(i + 1).toFixed(1)} ${Y(y).toFixed(1)}`).join("");
+	$(id).innerHTML = g + `<path class="ln tr" d="${path(a)}"/><path class="ln va" d="${path(b)}"/>`;
+}
+
+function apply(s) {
+	run.W = s.weights;
+	run.epochs = s.epochs;
+	draw(false); info(); meta();
+
+	$("#pbar").style.width = (s.status === "done" ? 100 : s.epochs ? 100 * s.epoch / s.epochs : 0) + "%";
+	let txt = `Epoch ${s.epoch}/${s.epochs}`;
+	if (s.status === "done") txt = s.early_stopped ? `Early stopping at epoch ${s.epoch} (best epoch ${s.best_epoch})` : `Done, ${s.epoch} epochs`;
+	if (s.status === "stopped") txt = `Stopped at epoch ${s.epoch}`;
+	if (s.status === "error") txt = "Training failed";
+	$("#ptxt").textContent = txt;
+
+	const con = $("#console");
+	con.hidden = !s.log.length;
+	con.textContent = s.log.join("\n");
+	con.scrollTop = con.scrollHeight;
+
+	const h = s.history, n = h.loss.length;
+	$("#cards").hidden = $("#charts").hidden = n === 0;
+	if (!n) return;
+	const i = s.status !== "running" && s.best_epoch ? s.best_epoch - 1 : n - 1;   // meilleure époque une fois fini
+	const c = [
+		["Val accuracy", (h.val_acc[i] * 100).toFixed(2) + " %"], ["Val loss", h.val_loss[i].toFixed(4)],
+		["Precision", h.val_precision[i].toFixed(4)], ["Recall", h.val_recall[i].toFixed(4)], ["F1", h.val_f1[i].toFixed(4)],
+		["Train accuracy", (h.acc[i] * 100).toFixed(2) + " %"], [s.status === "running" ? "Epoch" : "Shown epoch", i + 1]
+	];
+	$("#cards").innerHTML = c.map(([l, v]) => `<div class="card"><b>${v}</b><span>${l}</span></div>`).join("");
+	chart("#ch-loss", h.loss, h.val_loss, false);
+	chart("#ch-acc", h.acc, h.val_acc, true);
+}
+
+function finish(s) {
+	if (s.status === "error") { setRunning(false); fail("#t-err", s.error || "Training failed"); return; }
+	const c = s.config;
+	trained = { label: `${c.opt.toUpperCase()}, ${c.act.toUpperCase()}, layers ${c.layers.join("-")}`, file: s.model_file, n: s.epoch };
+	setRunning(false);
+	$("#tab-pred").disabled = false;
+	$("#tab-pred").title = "";
+	$("#lock").hidden = true;
+	$("#p-model").textContent = `Model: ${trained.label}, ${trained.n} epochs (${trained.file})`;
+	$("#p-cmd").textContent = `python predict.py \\\n  --dataset ${$("#pdset").value} \\\n  --model ${trained.file}`;
+}
+
+$("#train").onclick = startTraining;
+$("#stop").onclick = () => api("/api/stop", {}).catch(() => {});
+$("#go-pred").onclick = () => tab("predict");
+
+/* ---------- Tabs ---------- */
+function tab(t) {
+	["train", "predict"].forEach(n => {
+		$("#" + n + "-panel").hidden = n !== t;
+		document.querySelector(`.tab[data-t="${n}"]`).classList.toggle("on", n === t);
+	});
+}
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => { if (!b.disabled) tab(b.dataset.t); });
+
+/* ---------- Predict ---------- */
+function renderTable() {
+	const only = $("#only-err").checked;
+	const rows = predRows.filter(r => !only || r.true !== r.pred);
+	$("#tbody").innerHTML = rows.slice(0, 400).map(r => {
+		const ok = r.true === r.pred;
+		return `<tr><td>${esc(r.id)}</td><td>${r.true}</td><td>${r.pred}</td>
+			<td><span class="pb"><i style="width:${(100 * r.p_m).toFixed(0)}%"></i></span>${(100 * r.p_m).toFixed(1)} %</td>
+			<td>${(100 * r.p_b).toFixed(1)} %</td><td class="mk ${ok ? "up" : "dn"}">${ok ? "✓" : "✗"}</td></tr>`;
+	}).join("");
+	$("#tcount").textContent = rows.length > 400 ? `Showing 400 of ${rows.length} rows` : `${rows.length} rows`;
+}
+
+function renderPred(d) {
+	$("#p-cards").innerHTML = [
+		["Accuracy", (100 * d.accuracy).toFixed(2) + " %"], ["Cross-entropy", d.loss.toFixed(4)],
+		["Precision", d.precision.toFixed(4)], ["Recall", d.recall.toFixed(4)], ["F1", d.f1.toFixed(4)], ["Samples", d.samples]
+	].map(([l, v]) => `<div class="card"><b>${v}</b><span>${l}</span></div>`).join("");
+	$("#p-cm").innerHTML = `
+		<div class="h"></div><div class="h">Predicted M</div><div class="h">Predicted B</div>
+		<div class="h">True M</div><div class="ok"><b>${d.tp}</b>detected</div><div class="bad"><b>${d.fn}</b>missed</div>
+		<div class="h">True B</div><div class="bad"><b>${d.fp}</b>false alarms</div><div class="ok"><b>${d.tn}</b>correct benign</div>`;
+	$("#p-term").textContent = [
+		`> ${d.samples} samples loaded from '${d.dataset}'`,
+		`> binary cross-entropy: ${d.loss.toFixed(4)}`,
+		`> accuracy: ${(100 * d.accuracy).toFixed(2)} %`,
+		`> malignant detected: ${d.tp}  missed: ${d.fn}  false alarms: ${d.fp}  correct benign: ${d.tn}`,
+		`> precision: ${d.precision.toFixed(4)}  recall: ${d.recall.toFixed(4)}  f1: ${d.f1.toFixed(4)}`,
+		`> predictions saved to '${d.output}'`
+	].join("\n");
+	predRows = d.rows;
+	$("#p-out").hidden = false;
+	renderTable();
+}
+
+async function runPred() {
+	const b = $("#run-pred");
+	b.disabled = true;
+	$("#p-err").textContent = "";
+	try { renderPred(await api("/api/predict", { dataset: $("#pdset").value })); }
+	catch (e) { fail("#p-err", e.message); }
+	b.disabled = false;
+}
+$("#run-pred").onclick = runPred;
+$("#pdset").addEventListener("keydown", e => { if (e.key === "Enter") runPred(); });
+$("#pdset").addEventListener("input", () => { if (trained) $("#p-cmd").textContent = `python predict.py \\\n  --dataset ${$("#pdset").value} \\\n  --model ${trained.file}`; });
+$("#only-err").addEventListener("change", renderTable);
+
+renderLayers(); paintSeg(); refresh();
+load(true);
+</script>
+</body>
+</html>

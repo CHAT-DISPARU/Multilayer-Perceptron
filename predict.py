@@ -25,11 +25,10 @@ import argparse
 import csv
 import sys
 import numpy as np
-from mlp.losses import binary_cross_entropy, compute_accuracy, confusion_counts, precision_recall_f1
+from mlp.columns import INFO
 from mlp.csv_reader import load_csv
-from mlp.losses import binary_cross_entropy, compute_accuracy
+from mlp.losses import binary_cross_entropy, compute_accuracy, confusion_counts, precision_recall_f1
 from mlp.network import Network
-from training import INFO
 
 
 def load_dataset(path):
@@ -48,8 +47,8 @@ def load_dataset(path):
 
 
 def load_model(model_path):
-    """recharge le reseau (poids + standardisation du train)"""
-    return Network.load(model_path)
+	"""recharge le reseau (poids + standardisation du train)"""
+	return Network.load(model_path)
 
 
 def confusion(y_pred, y_true):

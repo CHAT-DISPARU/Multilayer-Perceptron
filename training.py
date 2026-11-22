@@ -25,21 +25,12 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
+from mlp.columns import INFO
 from mlp.csv_reader import load_csv
 from mlp.losses import binary_cross_entropy, compute_accuracy
 from mlp.network import Network
 from mlp.optimiseur import Adam, SGD
 
-INFO = [
-	"ID",
-	"Diagnosis",
-	"Radius_mean", "Texture_mean", "Perimeter_mean", "Area_mean", "Smoothness_mean",
-	"Compactness_mean", "Concavity_mean", "Concave_points_mean", "Symmetry_mean", "Fractal_dimension_mean",
-	"Radius_se", "Texture_se", "Perimeter_se", "Area_se", "Smoothness_se",
-	"Compactness_se", "Concavity_se", "Concave_points_se", "Symmetry_se", "Fractal_dimension_se",
-	"Radius_worst", "Texture_worst", "Perimeter_worst", "Area_worst", "Smoothness_worst",
-	"Compactness_worst", "Concavity_worst", "Concave_points_worst", "Symmetry_worst", "Fractal_dimension_worst"
-]
 
 
 def extract_data(csv_path):
@@ -130,6 +121,7 @@ def save_history(path, history, opt_name, act, lr, args):
 		"batch_size": args.batch_size,
 		"epochs_requested": args.epochs,
 		"epochs_run": len(history["loss"]),
+		"loss": args.loss,
 		"patience": args.patience,
 		"best_epoch": history.get("best_epoch"),
 		"history": {k: v for k, v in history.items() if k != "best_epoch"},
@@ -147,7 +139,12 @@ def main():
 	parser.add_argument("--batch_size", type=int, default=16, help="Mini-batch size")
 	parser.add_argument("--lr", "--learning_rate", dest="lr", type=float, default=None,
 					help="Learning rate (default: 0.001 for Adam, 0.01 for SGD)")
-	parser.add_argument("--optimizer", type=str, default="adam", choices=["adam", "sgd"], help="Optimizer to use (adam or sgd)")
+	parser.add_argument("--optimizer", type=str, default="sgd", choices=["adam", "sgd"], help="Optimizer to use (adam or sgd)")
+	parser.add_argument("--loss", type=str, default="categoricalCrossentropy",
+			choices=["categoricalCrossentropy", "binaryCrossentropy"],
+			help="Loss function (equivalent with a 2-output softmax)")
+	parser.add_argument("--activation", type=str, default="relu", choices=["relu", "sigmoid", "tanh"],
+					help="Hidden layers activation (ignored with --all)")
 	parser.add_argument("--save_path", type=str, default="saved_model", help="Path to save the trained model")
 	parser.add_argument("--all", action="store_true", help="Compare all activations (ReLU, Sigmoid, Tanh) for both SGD and Adam")
 	parser.add_argument("--layer", type=int, nargs="+", default=[24, 24],
@@ -185,14 +182,15 @@ def main():
 		X_train = (X_train_raw - mean) / std
 		X_val = (X_val_raw - mean) / std
 	except Exception as e:
-		print(f"[ERROR] Failed to standardize data or save parameters: {e}", file=sys.stderr)
+		print(f"[ERROR] Failed to standardize data: {e}", file=sys.stderr)
 		sys.exit(1)
 
-	print(f"> Starting training on {X_train.shape} samples (validation: {X_val.shape} samples)...")
+	print(f"x_train shape : {X_train.shape}")
+	print(f"x_valid shape : {X_val.shape}")
 	
 	#def configurations a lancer
 	optimizers_to_test = ["sgd", "adam"] if args.all else [args.optimizer]
-	activations_to_test = ["relu", "sigmoid", "tanh"] if args.all else ["relu"]
+	activations_to_test = ["relu", "sigmoid", "tanh"] if args.all else [args.activation]
 	
 	# Dic imbrique histories[opt][act] = history
 	histories = {}
